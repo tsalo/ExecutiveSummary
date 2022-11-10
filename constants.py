@@ -1,54 +1,32 @@
-
 IMAGE_INFO = {
-    'concat_pre_reg_gray': {
-        'pattern': 'DVARS_and_FD_CONCA_*task-rest*.png',
-        'title': 'Pre-Regression'
-        },
-    'concat_post_reg_gray': {
-        'pattern': 'DVARS_and_FD_CONCP_*task-rest*.png',
-        'title': 'Post-Regression'
-        },
-    'atlas_in_t1': {
-        'pattern': '*_desc-AtlasInT1w.gif',
-        'title': 'Atlas in T1'
-        },
-    't1_in_atlas': {
-        'pattern': '*_desc-T1wInAtlas.gif',
-        'title': 'T1 in Atlas'
-        },
-    'atlas_in_subcort': {
-        'pattern': '*_desc-AtlasInSubcort.gif',
-        'title': 'Atlas in Subcorticals'
-        },
-    'subcort_in_atlas': {
-        'pattern': '*_desc-SubcortInAtlas.gif',
-        'title': 'Subcorticals in Atlas'
-        },
-    'task_pre_reg_gray': {
-        'pattern': 'DVARS_and_FD*%s*.png',
-        'title': 'Pre-Regression'
-        },
-    'task_post_reg_gray': {
-        'pattern': 'postreg_DVARS_and_FD*%s*.png',
-        'title': 'Post-Regression'
-        },
-    'task_in_t1': {
-        'pattern': '*%s*_desc-TaskInT1.gif',
-        'title': 'Task in T1'
-        },
-    't1_in_task': {
-        'pattern': '*%s*_desc-T1InTask.gif',
-        'title': 'T1 in Task'
-        },
-    'ref': {
-        'pattern': '*%s*ref.png',
-        'title': 'Reference'
-        },
-    'bold': {
-        'pattern': '*%s*bold.png',
-        'title': 'BOLD'
-        }
-    }
+    "concat_pre_reg_gray": {
+        "pattern": "DVARS_and_FD_CONCA_*task-rest*.png",
+        "title": "Pre-Regression",
+    },
+    "concat_post_reg_gray": {
+        "pattern": "DVARS_and_FD_CONCP_*task-rest*.png",
+        "title": "Post-Regression",
+    },
+    "atlas_in_t1": {"pattern": "*_desc-AtlasInT1w.gif", "title": "Atlas in T1"},
+    "t1_in_atlas": {"pattern": "*_desc-T1wInAtlas.gif", "title": "T1 in Atlas"},
+    "atlas_in_subcort": {
+        "pattern": "*_desc-AtlasInSubcort.gif",
+        "title": "Atlas in Subcorticals",
+    },
+    "subcort_in_atlas": {
+        "pattern": "*_desc-SubcortInAtlas.gif",
+        "title": "Subcorticals in Atlas",
+    },
+    "task_pre_reg_gray": {"pattern": "DVARS_and_FD*%s*.png", "title": "Pre-Regression"},
+    "task_post_reg_gray": {
+        "pattern": "postreg_DVARS_and_FD*%s*.png",
+        "title": "Post-Regression",
+    },
+    "task_in_t1": {"pattern": "*%s*_desc-TaskInT1.gif", "title": "Task in T1"},
+    "t1_in_task": {"pattern": "*%s*_desc-T1InTask.gif", "title": "T1 in Task"},
+    "ref": {"pattern": "*%s*ref.png", "title": "Reference"},
+    "bold": {"pattern": "*%s*bold.png", "title": "BOLD"},
+}
 
 # HTML constants:
 HTML_START = """
@@ -85,7 +63,7 @@ HTML_START = """
 # as well as the page header.
 # Needs the following values:
 #    subject, session.
-TITLE="""
+TITLE = """
 <title>Executive Summary: {subject} {session}</title>
 <header> <h1>{subject}{sep}{session}</h1> </header>
 """
@@ -237,16 +215,16 @@ BOLD_GRAY_END = """
 # Layout the row of bold, reference and gray-ordinates images for the task.
 # Needs the following values and corresponding indices:
 #    modal_id, bold, ref, task_pre_reg_gray, task_post_reg_gray
-#BOLD_GRAY_ROW2="""
-            #<div class="w3-quarter">
-                #<div class="w3-row w3-center label1">Pre-Regression</div>
-                #<div class="w3-row"><img src="{task_pre_reg_gray}" onclick="open_{modal_id}_to_index({task_pre_reg_gray_idx})"></div>
-            #</div>
-            #<div class="w3-quarter">
-                #<div class="w3-row w3-center label1">Post-Regression</div>
-                #<div class="w3-row"><img src="{task_post_reg_gray}" onclick="open_{modal_id}_to_index({task_post_reg_gray_idx})"></div>
-            #</div>
-        #"""
+# BOLD_GRAY_ROW2="""
+# <div class="w3-quarter">
+# <div class="w3-row w3-center label1">Pre-Regression</div>
+# <div class="w3-row"><img src="{task_pre_reg_gray}" onclick="open_{modal_id}_to_index({task_pre_reg_gray_idx})"></div>
+# </div>
+# <div class="w3-quarter">
+# <div class="w3-row w3-center label1">Post-Regression</div>
+# <div class="w3-row"><img src="{task_post_reg_gray}" onclick="open_{modal_id}_to_index({task_post_reg_gray_idx})"></div>
+# </div>
+# """
 
 # Close up the divisions and section.
 TASKS_SECTION_END = """
@@ -885,5 +863,3 @@ function brainsprite(params) {
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
 """
-
-

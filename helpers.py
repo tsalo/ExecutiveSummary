@@ -3,6 +3,7 @@ from os import path
 import glob
 import shutil
 
+
 def find_files(seek_dir, pattern):
     """
     Finds all files within the directory specified that match
@@ -18,7 +19,6 @@ def find_files(seek_dir, pattern):
         paths.append(found_file)
 
     return paths
-
 
 
 def find_and_copy_files(seek_dir, pattern, output_dir):
@@ -79,13 +79,11 @@ def find_one_file(seek_dir, pattern):
     filelist = glob.glob(glob_pattern)
 
     # Make sure we got exactly one file.
-    numfiles=len(filelist)
+    numfiles = len(filelist)
     if numfiles is 1:
         one_file = filelist[0]
     else:
         # TODO: Log info in errorfile.
-        print('info: Found %s files with pattern: %s' % (numfiles, glob_pattern))
+        print("info: Found %s files with pattern: %s" % (numfiles, glob_pattern))
 
     return one_file
-
-
