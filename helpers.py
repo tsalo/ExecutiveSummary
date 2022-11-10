@@ -80,7 +80,7 @@ def find_one_file(seek_dir, pattern):
 
     # Make sure we got exactly one file.
     numfiles = len(filelist)
-    if numfiles is 1:
+    if numfiles == 1:
         one_file = filelist[0]
     else:
         # TODO: Log info in errorfile.

@@ -7,13 +7,11 @@ the DCAN-Labs fMRI pipelines.
 
 __version__ = "2.0.0"
 
-import glob
 import os
 import re
 import stat
-from os import chmod, getcwd, listdir, path
 
-from constants import *
+import constants
 from helpers import find_and_copy_files, find_files, find_one_file
 
 
@@ -38,7 +36,7 @@ class ModalContainer(object):
     def __init__(self, modal_id, image_class):
 
         self.modal_id = modal_id
-        self.modal_container = MODAL_START.format(modal_id=self.modal_id)
+        self.modal_container = constants.MODAL_START.format(modal_id=self.modal_id)
         self.button = ""
 
         self.image_class = image_class
@@ -56,7 +54,7 @@ class ModalContainer(object):
 
     def get_button(self, btn_label):
         # Return HTML to creates a button that displays the modal container.
-        self.button += DISPLAY_MODAL_BUTTON.format(
+        self.button += constants.DISPLAY_MODAL_BUTTON.format(
             modal_id=self.modal_id, btn_label=btn_label
         )
         return self.button
@@ -67,7 +65,7 @@ class ModalContainer(object):
         self.state = "closed"
 
         # Close up the elements.
-        self.modal_container += MODAL_END.format(modal_id=self.modal_id)
+        self.modal_container += constants.MODAL_END.format(modal_id=self.modal_id)
 
         # Return the HTML.
         return self.modal_container
@@ -75,7 +73,7 @@ class ModalContainer(object):
     def get_scripts(self):
         # The containter needs the scripts to show the correct
         # image when the container is opened.
-        self.scripts += MODAL_SCRIPTS % {
+        self.scripts += constants.MODAL_SCRIPTS % {
             "modal_id": self.modal_id,
             "image_class": self.image_class,
         }
@@ -92,7 +90,7 @@ class ModalContainer(object):
 
     def add_image(self, image_file):
 
-        if self.state is not "open":
+        if self.state != "open":
             print("ERROR: Cannot add images after the HTML has been written.")
             return 0
 
@@ -101,7 +99,7 @@ class ModalContainer(object):
         display_name = os.path.basename(image_file)
 
         # Add the image to container, and assign the class.
-        self.modal_container += IMAGE_WITH_CLASS.format(
+        self.modal_container += constants.IMAGE_WITH_CLASS.format(
             modal_id=self.modal_id,
             image_class=self.image_class,
             image_file=image_file,
@@ -133,15 +131,15 @@ class ModalSlider(ModalContainer):
         self.state = "closed"
 
         # Add the buttons and close up the elements.
-        self.modal_container += SLIDER_END.format(image_class=self.image_class)
-        self.modal_container += MODAL_END.format(modal_id=self.modal_id)
+        self.modal_container += constants.SLIDER_END.format(image_class=self.image_class)
+        self.modal_container += constants.MODAL_END.format(modal_id=self.modal_id)
         # Return the HTML.
         return self.modal_container
 
     def get_scripts(self):
         # The slider needs the scripts to go along with the
         # right and left buttons.
-        self.scripts += SLIDER_SCRIPTS % {
+        self.scripts += constants.SLIDER_SCRIPTS % {
             "modal_id": self.modal_id,
             "image_class": self.image_class,
         }
@@ -197,14 +195,14 @@ class TxSection(Section):
             viewer = self.tx + "-viewer"
             spriteImg = self.tx + "-spriteImg"
 
-            spriteviewer += SPRITE_VIEWER_HTML.format(
+            spriteviewer += constants.SPRITE_VIEWER_HTML.format(
                 viewer=viewer,
                 spriteImg=spriteImg,
                 mosaic_path=mosaic_path,
                 width="100%",
             )
 
-            spriteloader += SPRITE_LOAD_SCRIPT % {
+            spriteloader += constants.SPRITE_LOAD_SCRIPT % {
                 "tx": self.tx,
                 "viewer": viewer,
                 "spriteImg": spriteImg,
@@ -226,7 +224,7 @@ class TxSection(Section):
         pngs_list = sorted(find_files(self.img_path, pngs_glob))
 
         # Just a sanity check, since we happen to know how many to expect.
-        if len(pngs_list) is not 9:
+        if len(pngs_list) != 9:
             print(
                 "Expected 9 %s pngs but found %s." % (self.tx, len(pngs_list))
             )  # TODO: log WARNING
@@ -238,7 +236,7 @@ class TxSection(Section):
         # Add HTML for the bar with the brainsprite label and pngs button,
         # and for the brainsprite viewer.
         btn_label = "View %s pngs" % self.tx
-        self.section += TX_SECTION.format(
+        self.section += constants.TX_SECTION.format(
             tx=self.tx,
             brainsprite_label=brainsprite_label,
             pngs_button=pngs_slider.get_button(btn_label),
@@ -271,7 +269,7 @@ class AnatSection(Section):
             "atlas_in_subcort",
             "subcort_in_atlas",
         ]:
-            values = IMAGE_INFO[key]
+            values = constants.IMAGE_INFO[key]
             pattern = values["pattern"]
             img_file = find_one_file(self.img_path, pattern)
             if img_file is not None:
@@ -279,39 +277,39 @@ class AnatSection(Section):
                 row_data["row_label"] = values["title"]
                 row_data["row_img"] = img_file
                 row_data["row_idx"] = self.regs_slider.add_image(img_file)
-                self.section += LAYOUT_ROW.format(**row_data)
+                self.section += constants.LAYOUT_ROW.format(**row_data)
             else:
-                self.section += PLACEHOLDER_ROW.format(row_label=values["title"])
+                self.section += constants.PLACEHOLDER_ROW.format(row_label=values["title"])
 
     def write_gray_row(self):
-        self.section += GRAY_ROW_START
+        self.section += constants.GRAY_ROW_START
 
         # Get gray-ordinates plots.
         gray_data = {}
         gray_data["row_modal"] = self.img_modal.get_modal_id()
 
         for key in ["concat_pre_reg_gray", "concat_post_reg_gray"]:
-            values = IMAGE_INFO[key]
+            values = constants.IMAGE_INFO[key]
             img_file = find_one_file(self.img_path, values["pattern"])
             if img_file is not None:
                 # Add image to data, and to the 'generic' images container.
                 gray_data["row_label"] = values["title"]
                 gray_data["row_img"] = img_file
                 gray_data["row_idx"] = self.img_modal.add_image(img_file)
-                self.section += LAYOUT_QUARTER_ROW.format(**gray_data)
+                self.section += constants.LAYOUT_QUARTER_ROW.format(**gray_data)
             else:
-                self.section += PLACEHOLDER_QUARTER_ROW.format(
+                self.section += constants.PLACEHOLDER_QUARTER_ROW.format(
                     row_label=values["title"]
                 )
 
-        self.section += GRAY_ROW_END
+        self.section += constants.GRAY_ROW_END
 
     def run(self):
         # Write the HTML for the section.
-        self.section += ANAT_SECTION_START
+        self.section += constants.ANAT_SECTION_START
         self.write_atlas_rows()
         self.write_gray_row()
-        self.section += ANAT_SECTION_END
+        self.section += constants.ANAT_SECTION_END
 
 
 class TasksSection(Section):
@@ -325,7 +323,7 @@ class TasksSection(Section):
     def write_T1_reg_rows(self, task_name, task_num):
 
         # Write the header for the next few rows.
-        self.section += TASK_LABEL_ROW.format(task_name=task_name, task_num=task_num)
+        self.section += constants.TASK_LABEL_ROW.format(task_name=task_name, task_num=task_num)
 
         row_data = {}
         row_data["row_modal"] = self.regs_slider.get_modal_id()
@@ -338,7 +336,7 @@ class TasksSection(Section):
         # the source-directory. When found and copied to the directory of images,
         # add the row.
         for key in ["task_in_t1", "t1_in_task"]:
-            values = IMAGE_INFO[key]
+            values = constants.IMAGE_INFO[key]
             pattern = values["pattern"] % task_pattern
             task_file = find_one_file(self.img_path, pattern)
             if task_file:
@@ -346,9 +344,9 @@ class TasksSection(Section):
                 row_data["row_label"] = values["title"]
                 row_data["row_img"] = task_file
                 row_data["row_idx"] = self.regs_slider.add_image(task_file)
-                self.section += LAYOUT_ROW.format(**row_data)
+                self.section += constants.LAYOUT_ROW.format(**row_data)
             else:
-                self.section += PLACEHOLDER_ROW.format(row_label=values["title"])
+                self.section += constants.PLACEHOLDER_ROW.format(row_label=values["title"])
 
     def write_bold_gray_row(self, task_name, task_num):
         bold_data = {}
@@ -359,11 +357,11 @@ class TasksSection(Section):
         task_pattern = task_name + "*" + task_num
 
         # Make the first half of the row - bold and ref data.
-        self.section += BOLD_GRAY_START
+        self.section += constants.BOLD_GRAY_START
 
         # For bold and ref files, may include run number or not.
         for key in ["bold", "ref"]:
-            values = IMAGE_INFO[key]
+            values = constants.IMAGE_INFO[key]
             pattern = values["pattern"] % task_pattern
             task_file = find_one_file(self.img_path, pattern)
             if task_file:
@@ -371,7 +369,7 @@ class TasksSection(Section):
                 bold_data["row_label"] = values["title"]
                 bold_data["row_img"] = task_file
                 bold_data["row_idx"] = self.img_modal.add_image(task_file)
-                self.section += LAYOUT_HALF_ROW.format(**bold_data)
+                self.section += constants.LAYOUT_HALF_ROW.format(**bold_data)
             else:
                 # File was not found with both task name and run number.
                 # Try again with task name only (no run number).
@@ -382,17 +380,17 @@ class TasksSection(Section):
                     bold_data["row_label"] = values["title"]
                     bold_data["row_img"] = task_file
                     bold_data["row_idx"] = self.img_modal.add_image(task_file)
-                    self.section += LAYOUT_HALF_ROW.format(**bold_data)
+                    self.section += constants.LAYOUT_HALF_ROW.format(**bold_data)
                 else:
-                    self.section += PLACEHOLDER_HALF_ROW.format(
+                    self.section += constants.PLACEHOLDER_HALF_ROW.format(
                         row_label=values["title"]
                     )
 
-        self.section += BOLD_GRAY_SPLIT
+        self.section += constants.BOLD_GRAY_SPLIT
 
         # For each gray-plot, there is only one name to look for.
         for key in ["task_pre_reg_gray", "task_post_reg_gray"]:
-            values = IMAGE_INFO[key]
+            values = constants.IMAGE_INFO[key]
             pattern = values["pattern"] % task_pattern
             task_file = find_one_file(self.img_path, pattern)
             if task_file:
@@ -400,21 +398,21 @@ class TasksSection(Section):
                 bold_data["row_label"] = values["title"]
                 bold_data["row_img"] = task_file
                 bold_data["row_idx"] = self.img_modal.add_image(task_file)
-                self.section += LAYOUT_QUARTER_ROW.format(**bold_data)
+                self.section += constants.LAYOUT_QUARTER_ROW.format(**bold_data)
             else:
-                self.section += PLACEHOLDER_QUARTER_ROW.format(
+                self.section += constants.PLACEHOLDER_QUARTER_ROW.format(
                     row_label=values["title"]
                 )
 
-        self.section += BOLD_GRAY_END
+        self.section += constants.BOLD_GRAY_END
 
     def run(self, tasks):
-        if len(tasks) is 0:
+        if len(tasks) == 0:
             print("No tasks were found.")
             return
 
         # Write the column headings.
-        self.section += TASKS_SECTION_START
+        self.section += constants.TASKS_SECTION_START
 
         # Each entry in task_entries is a tuple of the task-name (without
         # task-) and run number (without run-).
@@ -423,7 +421,7 @@ class TasksSection(Section):
             self.write_bold_gray_row(task_name, task_num)
 
         # Add the end of the tasks section.
-        self.section += TASKS_SECTION_END
+        self.section += constants.TASKS_SECTION_END
 
 
 class layout_builder(object):
@@ -536,11 +534,11 @@ class layout_builder(object):
 
         # Start building the HTML document, and put the subject and session
         # into the title and page header.
-        head = HTML_START
+        head = constants.HTML_START
         if self.session_id is None:
-            head += TITLE.format(subject=self.subject_id, sep="", session="")
+            head += constants.TITLE.format(subject=self.subject_id, sep="", session="")
         else:
-            head += TITLE.format(
+            head += constants.TITLE.format(
                 subject=self.subject_id, sep=": ", session=self.session_id
             )
         body = ""
@@ -584,12 +582,12 @@ class layout_builder(object):
 
         # There are a bunch of scripts used in this page. Keep their HTML together.
         scripts = (
-            BRAINSPRITE_SCRIPTS + t1_section.get_scripts() + t2_section.get_scripts()
+            constants.BRAINSPRITE_SCRIPTS + t1_section.get_scripts() + t2_section.get_scripts()
         )
         scripts += img_modal.get_scripts() + regs_slider.get_scripts()
 
         # Assemble and write the document.
-        html_doc = head + body + scripts + HTML_END
+        html_doc = head + body + scripts + constants.HTML_END
         if self.session_id is None:
             self.write_html(html_doc, "executive_summary_%s.html" % (self.subject_id))
         else:

@@ -8,7 +8,6 @@ the DCAN-Labs fMRI pipelines.
 __version__ = "2.0.0"
 
 import argparse
-import glob
 import os
 import shutil
 import subprocess
@@ -19,7 +18,6 @@ from re import split
 
 from PIL import Image  # for BrainSprite
 
-from helpers import find_and_copy_file
 from layout_builder import layout_builder
 
 
@@ -148,8 +146,6 @@ def init_summary(proc_files, summary_dir=None, layout_only=False):
                 summary_path = None
                 html_path = None
                 images_path = None
-
-        program_dir = os.path.dirname(os.path.realpath(__file__))
 
     return summary_path, html_path, images_path
 
