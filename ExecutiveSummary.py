@@ -7,18 +7,20 @@ the DCAN-Labs fMRI pipelines.
 
 __version__ = "2.0.0"
 
-import os
-from os import path
 import argparse
 import glob
+import os
 import shutil
 import subprocess
-from layout_builder import layout_builder
 from datetime import datetime
-from helpers import find_and_copy_file
-from PIL import Image  # for BrainSprite
-from re import split
 from math import sqrt
+from os import path
+from re import split
+
+from PIL import Image  # for BrainSprite
+
+from helpers import find_and_copy_file
+from layout_builder import layout_builder
 
 
 def generate_parser():
