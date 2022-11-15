@@ -13,7 +13,6 @@ import shutil
 import subprocess
 from datetime import datetime
 from math import sqrt
-from os import path
 from re import split
 
 from PIL import Image  # for BrainSprite
@@ -111,10 +110,10 @@ def init_summary(proc_files, summary_dir=None, layout_only=False):
         html_path = os.path.join(summary_path, "executivesummary")
 
         # If we are going to create the files, need to clean up old files.
-        if path.exists(html_path) and not layout_only:
+        if os.path.exists(html_path) and not layout_only:
             shutil.rmtree(html_path)
 
-        if not path.exists(html_path):
+        if not os.path.exists(html_path):
             try:
                 os.makedirs(html_path)
 
@@ -134,7 +133,7 @@ def init_summary(proc_files, summary_dir=None, layout_only=False):
 
         images_path = os.path.join(html_path, "img")
 
-        if not path.exists(images_path):
+        if not os.path.exists(images_path):
             try:
                 os.makedirs(images_path)
             except OSError as err:
