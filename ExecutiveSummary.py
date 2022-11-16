@@ -13,6 +13,7 @@ from re import split
 from PIL import Image  # for BrainSprite
 
 from layout_builder import layout_builder
+from preprocessing import preprocess
 
 
 def generate_parser():
@@ -254,18 +255,6 @@ def _cli():
     interface(**kwargs)
 
 
-def preprocess_func(
-    output_dir,
-    html_path,
-    subject_id,
-    session_id=None,
-    bids_input=None,
-    atlas=None,
-):
-    """Python translation of executivesummary_preproc.sh."""
-    ...
-
-
 def interface(
     files_path,
     subject_id,
@@ -309,7 +298,7 @@ def interface(
 
         subprocess.call(preproc_cmd, shell=True)
 
-        preprocess_func(
+        preprocess(
             output_dir=files_path,
             html_path=html_path,
             subject_id=subject_id,

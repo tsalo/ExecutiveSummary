@@ -46,6 +46,8 @@ def find_and_copy_files(seek_dir, pattern, output_dir):
 def find_and_copy_file(seek_dir, pattern, output_dir):
     """Find a single file within seek_dir, using the pattern.
 
+    TAYLOR: UNUSED!
+
     If found, copies the file to the output_dir.
 
     :parameter: seek_dir: directory to be searched.

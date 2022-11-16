@@ -98,6 +98,7 @@ fi
 echo End of args.
 
 
+# TAYLOR: SECTION 1
 ### SET UP ENVIRONMENT VARIABLES ###
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source ${scriptdir}/setup_env.sh
@@ -141,6 +142,7 @@ if ! [ -d ${html_path} ]; then
     chmod 770 ${html_path} || true
 fi
 
+# TAYLOR: SECTION 2
 # Make the subfolder for the images. All paths in the html are relative to
 # the html folder, so must img must remain a subfolder to the html folder.
 
@@ -179,6 +181,7 @@ fi
 
 chown -R :${GROUP} ${html_path} || true
 chmod -R 770 ${html_path} || true
+# TAYLOR: END SECTION 2
 
 
 
@@ -284,6 +287,7 @@ chmod -R 770 ${html_path} || true
     }
 
 ################## BEGIN #########################
+# TAYLOR: SECTION 3
 # TAYLOR: These don't get used?!
 wm_mask_L="L_wm_2mm_${subject_id}_mask.nii.gz"
 wm_mask_R="R_wm_2mm_${subject_id}_mask.nii.gz"
@@ -367,7 +371,7 @@ done
 
 rm -rf ${pngs_scene}
 
-
+# TAYLOR: SECTION 4
 # Make pngs to be used for the brainsprite.
 if [ -z "${brainsprite_template}" ]; then
     # Use default.
@@ -402,6 +406,7 @@ else
     fi
 fi
 
+# TAYLOR: SECTION 5
 # Subcorticals
 subcort_sub=${ROIs}/sub2atl_ROI.2.nii.gz
 subcort_atl=${ROIs}/Atlas_ROIs.2.nii.gz
@@ -481,6 +486,7 @@ fi
 set +x
 
 
+# TAYLOR: SECTION 6
 ############
 ### Tasks
 ############
@@ -527,6 +533,7 @@ for TASK in `ls -d ${Results}/*task-*/` ; do
     set +x
 done
 
+# TAYLOR: SECTION 7
 set -x
 # If the bids-input was supplied and there are func files, slice
 # the bold and sbrefs into pngs so we can display them.
