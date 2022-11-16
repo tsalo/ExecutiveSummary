@@ -6,7 +6,7 @@ import shutil
 from nilearn.image import binarize_img
 from nipype.interfaces import fsl
 
-from interfaces import SlicesDir
+from interfaces import PNGAppend, SlicesDir
 
 
 def slicer(in_file, bin_file, view, slice_number, out_file):
@@ -36,11 +36,6 @@ def pngappend(in_files, out_file):
     """Stand-in for FSL's pngappend command."""
     cmd = f"pngappend {' + '.join(in_files)} {out_file}"
     print(cmd)
-
-
-def print_error():
-    """Prints the error and the line of code, where the error occurred; then Exits the script."""
-    ...
 
 
 def build_scene_from_pngs_template(
@@ -271,8 +266,12 @@ def preprocess(
     else:
         print(f"Registering {os.path.basename(t1_mask)} and atlas file: {atlas}")
         # set -x
-        make_default_slices_row(t1_mask, f"{images_pre}_desc-AtlasInT1w.gif", red_img=atlas)
-        make_default_slices_row(atlas, f"{images_pre}_desc-T1wInAtlas.gif", red_img=t1_mask)
+        make_default_slices_row(
+            t1_mask, f"{images_pre}_desc-AtlasInT1w.gif", red_img=atlas
+        )
+        make_default_slices_row(
+            atlas, f"{images_pre}_desc-T1wInAtlas.gif", red_img=t1_mask
+        )
         # set +x
 
     # From here on, use the whole T1 file rather than the mask (used above).
@@ -460,17 +459,18 @@ def preprocess(
 
                     counter += 1
 
-            # pngappend is another FSL command
-            pngappend(
+            append_atlas_in_subcort = PNGAppend(
                 in_files=atlas_in_subcort_pngs,
-                out_file=f"{images_pre}_desc-AtlasInSubcort.gif",
+                out_file=os.path.join(working, f"{images_pre}_desc-AtlasInSubcort.gif"),
             )
-            pngappend(
-                in_files=subcort_in_atlas_pngs,
-                out_file=f"{images_pre}_desc-SubcortInAtlas.gif",
-            )
+            append_atlas_in_subcort.run()
 
-            # popd
+            append_subcort_in_atlas = PNGAppend(
+                in_files=subcort_in_atlas_pngs,
+                out_file=os.path.join(working, f"{images_pre}_desc-SubcortInAtlas.gif"),
+            )
+            append_subcort_in_atlas.run()
+
         else:
             print(f"Missing {subcort_atl}.")
             print("Cannot create atlas-in-subcort or subcort-in-atlas.")
@@ -525,8 +525,12 @@ def preprocess(
 
         fMRI_pre = os.path.join(images_path, f"sub-{subject_id}_{fMRIName}")
         # set -x
-        make_default_slices_row(task_img, f"{fMRI_pre}_desc-T1InTask.gif", red_img=t1_2_brain)
-        make_default_slices_row(t1_2_brain, f"{fMRI_pre}_desc-TaskInT1.gif", red_img=task_img)
+        make_default_slices_row(
+            task_img, f"{fMRI_pre}_desc-T1InTask.gif", red_img=t1_2_brain
+        )
+        make_default_slices_row(
+            t1_2_brain, f"{fMRI_pre}_desc-TaskInT1.gif", red_img=task_img
+        )
         if has_t2:
             make_default_slices_row(
                 task_img,

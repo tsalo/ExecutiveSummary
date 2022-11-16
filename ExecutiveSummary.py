@@ -5,7 +5,6 @@ __version__ = "2.0.0"
 import argparse
 import os
 import shutil
-import subprocess
 from datetime import datetime
 from math import sqrt
 from re import split
@@ -280,31 +279,35 @@ def interface(
         return
 
     if not layout_only:
-        preproc_cmd = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "executivesummary_preproc.sh",
-        )
-        preproc_cmd += f" --output-dir {files_path}"
-        preproc_cmd += f" --html-path {html_path}"
-        preproc_cmd += f" --subject-id {subject_id}"
-        if session_id is not None:
-            preproc_cmd += f" --session-id {session_id}"
-
-        if func_path is not None:
-            preproc_cmd += f" --bids-input {func_path}"
-
-        if atlas is not None:
-            preproc_cmd += f" --atlas {atlas}"
-
-        subprocess.call(preproc_cmd, shell=True)
+        # preproc_cmd = os.path.join(
+        #     os.path.dirname(os.path.abspath(__file__)),
+        #     "executivesummary_preproc.sh",
+        # )
+        # preproc_cmd += f" --output-dir {files_path}"
+        # preproc_cmd += f" --html-path {html_path}"
+        # preproc_cmd += f" --subject-id {subject_id}"
+        # if session_id is not None:
+        #     preproc_cmd += f" --session-id {session_id}"
+        #
+        # if func_path is not None:
+        #     preproc_cmd += f" --bids-input {func_path}"
+        #
+        # if atlas is not None:
+        #     preproc_cmd += f" --atlas {atlas}"
+        #
+        # subprocess.call(preproc_cmd, shell=True)
 
         preprocess(
             output_dir=files_path,
             html_path=html_path,
             subject_id=subject_id,
+            brainsprite_template=None,  # use default
+            pngs_template=None,  # use default
             session_id=session_id,
             bids_input=func_path,
             atlas=atlas,
+            skip_sprite=False,  # non-debug mode
+            group="fnl_lab",
         )
 
         # Make mosaic(s) for brainsprite(s).
@@ -315,7 +318,6 @@ def interface(
         print("Finished with preprocessing.")
 
     # Done with preproc (or skipped it). Call the page layout to make the page.
-
     print("Begin page layout.")
     layout_builder(
         files_path=files_path,
