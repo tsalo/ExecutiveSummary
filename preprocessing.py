@@ -6,7 +6,7 @@ import shutil
 from nilearn.image import binarize_img
 from nipype.interfaces import fsl
 
-from interfaces import PNGAppend, SlicesDir
+from interfaces import PNGAppend, ShowScene, SlicesDir
 
 
 def slicer(in_file, bin_file, view, slice_number, out_file):
@@ -104,23 +104,21 @@ def build_scene_from_brainsprite_template(
         fo.write(data)
 
 
-def create_image_from_pngs_scene(out, scenenum, pngs_scene):
-    # TAYLOR: TODO: Replace with interface
-    cmd = f"wb_command -show-scene {pngs_scene} {scenenum} {out} 900 800"
-    print(cmd)
-
-
 def create_images_from_brainsprite_scene(Tx, processed_files, brainsprite_scene):
     # total_frames=$( grep "SceneInfo Index=" ${brainsprite_scene} | wc -l )
     total_frames = 0  # TAYLOR: TODO: implement grep stuff
 
     for i in range(total_frames):
-        out = os.path.join(processed_files, f"{Tx}_pngs", f"P_{Tx}_frame_{i}.png")
-        print(i)
+        out_file = os.path.join(processed_files, f"{Tx}_pngs", f"P_{Tx}_frame_{i}.png")
 
-        # TAYLOR: TODO: Replace with interface
-        cmd = f"wb_command -show-scene {brainsprite_scene} {i} {out} 900 800"
-        print(cmd)
+        show_scene = ShowScene(
+            scene_file=brainsprite_scene,
+            scene_name_or_number=i + 1,  # starts with 1
+            out_file=out_file,
+            image_width=900,
+            image_height=800,
+        )
+        _ = show_scene.run()
 
 
 def make_default_slices_row(base_img, out_png, working, red_img=None):
@@ -173,7 +171,7 @@ def preprocess(
     if not os.path.isdir(processed_files):
         raise Exception(f"Directory does not exist: {processed_files}")
 
-    AtlasSpaceFolder = ""  # isn't defined in bash script. maybe in setup?
+    AtlasSpaceFolder = "MNINonLinear"  # defined in setup_env.sh
     AtlasSpacePath = os.path.join(processed_files, AtlasSpaceFolder)
     Results = os.path.join(AtlasSpacePath, "Results")
     ROIs = os.path.join(AtlasSpacePath, "ROIs")
@@ -214,8 +212,7 @@ def preprocess(
             pass
         else:
             for file_ in glob.glob(os.path.join(images_path, "*")):
-                print(f"rm -f {file_}")
-                # rm -f file_
+                os.remove(file_)
 
     os.makedirs(images_path, exists_ok=True)
     if not os.path.isdir(images_path):
@@ -266,10 +263,14 @@ def preprocess(
         print(f"Registering {os.path.basename(t1_mask)} and atlas file: {atlas}")
         # set -x
         make_default_slices_row(
-            t1_mask, f"{images_pre}_desc-AtlasInT1w.gif", red_img=atlas
+            t1_mask,
+            f"{images_pre}_desc-AtlasInT1w.gif",
+            red_img=atlas,
         )
         make_default_slices_row(
-            atlas, f"{images_pre}_desc-T1wInAtlas.gif", red_img=t1_mask
+            atlas,
+            f"{images_pre}_desc-T1wInAtlas.gif",
+            red_img=t1_mask,
         )
         # set +x
 
@@ -283,16 +284,24 @@ def preprocess(
         t2 = t1
 
     rw = os.path.join(
-        AtlasSpacePath, "fsaverage_LR32k", f"{subject_id}.R.white.32k_fs_LR.surf.gii"
+        AtlasSpacePath,
+        "fsaverage_LR32k",
+        f"{subject_id}.R.white.32k_fs_LR.surf.gii",
     )
     rp = os.path.join(
-        AtlasSpacePath, "fsaverage_LR32k", f"{subject_id}.R.pial.32k_fs_LR.surf.gii"
+        AtlasSpacePath,
+        "fsaverage_LR32k",
+        f"{subject_id}.R.pial.32k_fs_LR.surf.gii",
     )
     lw = os.path.join(
-        AtlasSpacePath, "fsaverage_LR32k", f"{subject_id}.L.white.32k_fs_LR.surf.gii"
+        AtlasSpacePath,
+        "fsaverage_LR32k",
+        f"{subject_id}.L.white.32k_fs_LR.surf.gii",
     )
     lp = os.path.join(
-        AtlasSpacePath, "fsaverage_LR32k", f"{subject_id}.L.pial.32k_fs_LR.surf.gii"
+        AtlasSpacePath,
+        "fsaverage_LR32k",
+        f"{subject_id}.L.pial.32k_fs_LR.surf.gii",
     )
     t1_brain = os.path.join(AtlasSpacePath, "T1w_restore_brain.nii.gz")
     t2_brain = os.path.join(AtlasSpacePath, "T2w_restore_brain.nii.gz")
@@ -306,7 +315,14 @@ def preprocess(
 
     pngs_scene = os.path.join(processed_files, "pngs_scene.scene")
     build_scene_from_pngs_template(
-        t2, t1, rp, lp, rw, lw, pngs_scene=pngs_scene, pngs_template=pngs_template
+        t2,
+        t1,
+        rp,
+        lp,
+        rw,
+        lw,
+        pngs_scene=pngs_scene,
+        pngs_template=pngs_template,
     )
     image_names = [
         "T1-Axial-InferiorTemporal-Cerebellum",
@@ -329,19 +345,18 @@ def preprocess(
         "T2-Sagittal-Insula-Temporal-HippocampalSulcus",
     ]
 
-    for scenenum in range(len(image_names)):
-        if not has_t2 and (scenenum % 2) == 0:
-            print("skip t2 image")
-        else:
-            print(
-                "create_image_from_pngs_scene "
-                f"'{images_pre}_{image_names[scenenum]}.png' {scenenum}"
-            )
-            create_image_from_pngs_scene(
-                f"{images_pre}_{image_names[scenenum]}.png", scenenum
-            )
+    indexer = 1 if has_t2 else 2  # skip T2 images if T2 not available
+    for i_scene, image_name in enumerate(image_names[::indexer]):
+        show_scene = ShowScene(
+            scene_file=pngs_scene,
+            scene_name_or_number=i_scene + 1,
+            out_file=f"{images_pre}_{image_name}.png",
+            image_width=900,
+            image_height=800,
+        )
+        _ = show_scene.run()
 
-    # rm -rf ${pngs_scene}
+    os.remove(pngs_scene)
 
     # TAYLOR: SECTION 4
     # Make pngs to be used for the brainsprite.
