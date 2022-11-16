@@ -1,9 +1,4 @@
-#! /usr/bin/env python
-
-__doc__ = """
-Builds the layout for the Executive Summary of the bids-formatted output from
-the DCAN-Labs fMRI pipelines.
-"""
+"""Builds the layout for the Executive Summary of output from DCAN-Labs fMRI pipelines."""
 
 __version__ = "2.0.0"
 
@@ -21,7 +16,7 @@ from layout_builder import layout_builder
 
 
 def generate_parser():
-
+    """Generate parser for CLI."""
     parser = argparse.ArgumentParser(
         prog="ExecutiveSummary",
         description=__doc__,
@@ -71,6 +66,7 @@ def generate_parser():
         "will be used to find needed data from dcan bold processing. "
         "Example: summary_DCANBOLDProc_v4.0.0",
     )
+    # TAYLOR: This doesn't sound like an atlas...
     parser.add_argument(
         "--atlas",
         "-a",
@@ -95,7 +91,7 @@ def generate_parser():
 
 
 def init_summary(proc_files, summary_dir=None, layout_only=False):
-
+    """Initialize summary."""
     summary_path = None
     html_path = None
     images_path = None
@@ -119,14 +115,14 @@ def init_summary(proc_files, summary_dir=None, layout_only=False):
 
             except OSError as err:
                 print(
-                    "cannot make executivesummary folder within path... permissions? \nPath: %s"
-                    % summary_path
+                    "cannot make executivesummary folder within path... permissions? \n"
+                    f"Path: {summary_path}"
                 )
-                print("OSError: %s" % err)
+                print(f"OSError: {err}")
                 summary_path = None
                 html_path = None
     else:
-        print("Directory does not exist: %s" % summary_path)
+        print(f"Directory does not exist: {summary_path}")
         summary_path = None
 
     if html_path is not None:
@@ -138,10 +134,9 @@ def init_summary(proc_files, summary_dir=None, layout_only=False):
                 os.makedirs(images_path)
             except OSError as err:
                 print(
-                    "cannot make img folder within path... permissions? \nPath: %s"
-                    % html_path
+                    f"cannot make img folder within path... permissions? \nPath: {html_path}"
                 )
-                print("OSError: %s" % err)
+                print(f"OSError: {err}")
                 summary_path = None
                 html_path = None
                 images_path = None
@@ -149,19 +144,26 @@ def init_summary(proc_files, summary_dir=None, layout_only=False):
     return summary_path, html_path, images_path
 
 
-def make_mosaic(png_path, mosaic_path):
-    # Takes path to .png anatomical slices, creates a mosaic that can be
-    # used in a BrainSprite viewer, and saves to a specified filename.
+def natural_sort(list_):
+    """Need this function so frames sort in correct order."""
 
+    def convert(text):
+        return int(text) if text.isdigit() else text.lower()
+
+    def alphanum_key(key):
+        return [convert(c) for c in split("([0-9]+)", key)]
+
+    return sorted(list_, key=alphanum_key)
+
+
+def make_mosaic(png_path, mosaic_path):
+    """Take path to .png anatomical slices, create a mosaic, and save to file.
+
+    The mosaic will be usable in a BrainSprite viewer.
+    """
     # Get the cwd so we can get back; then change directory.
     cwd = os.getcwd()
     os.chdir(png_path)
-
-    # Need this function so frames sort in correct order.
-    def natural_sort(l):
-        convert = lambda text: int(text) if text.isdigit() else text.lower()
-        alphanum_key = lambda key: [convert(c) for c in split("([0-9]+)", key)]
-        return sorted(l, key=alphanum_key)
 
     files = os.listdir(png_path)
     files = natural_sort(files)
@@ -191,8 +193,10 @@ def make_mosaic(png_path, mosaic_path):
 
 
 def preprocess_tx(tx, files_path, images_path):
-    # If there are pngs for tx, make the mosaic file for the brainsprite.
-    # If not, no problem. Layout will use the mosaic if it is there.
+    """If there are pngs for tx, make the mosaic file for the brainsprite.
+
+    If not, no problem. Layout will use the mosaic if it is there.
+    """
     pngs = tx + "_pngs"
     pngs_dir = os.path.join(files_path, pngs)
 
@@ -202,7 +206,7 @@ def preprocess_tx(tx, files_path, images_path):
         mosaic_path = os.path.join(images_path, mosaic)
         make_mosaic(pngs_dir, mosaic_path)
     else:
-        print("There is no path: %s." % pngs_dir)
+        print(f"There is no path: {pngs_dir}.")
 
 
 def _cli():
@@ -210,11 +214,11 @@ def _cli():
     parser = generate_parser()
     args = parser.parse_args()
 
-    date_stamp = "{:%Y%m%d %H:%M}".format(datetime.now())
+    date_stamp = datetime.strftime(datetime.now(), format="%Y%m%d %H:%M")
 
-    print("Executive Summary was called at %s with:" % date_stamp)
-    print("\tOutput directory:      %s" % args.output_dir)
-    print("\tSubject:               %s" % args.subject_id)
+    print(f"Executive Summary was called at {date_stamp} with:")
+    print(f"\tOutput directory:      {args.output_dir}")
+    print(f"\tSubject:               {args.subject_id}")
 
     # output_dir is required, and the parser would have squawked if there was
     # not a value for output_dir. Just make sure it's a real directory.
@@ -228,32 +232,38 @@ def _cli():
 
     # If the caller specifies an arg is None, python is treating it as a string.
     # So, do some extra checking before passing the values to the interface.
-    if args.bids_dir is None or args.bids_dir.upper() == "NONE":
-        pass
-    else:
-        print("\tBIDS input files:      %s" % args.bids_dir)
+    if not (args.bids_dir is None or args.bids_dir.upper() == "NONE"):
+        print(f"\tBIDS input files:      {args.bids_dir}")
         kwargs["func_path"] = args.bids_dir
 
-    if args.summary_dir is None or args.summary_dir.upper() == "NONE":
-        pass
-    else:
-        print("\tSummary directory:     %s" % args.summary_dir)
+    if not (args.summary_dir is None or args.summary_dir.upper() == "NONE"):
+        print(f"\tSummary directory:     {args.summary_dir}")
         kwargs["summary_dir"] = args.summary_dir
 
     # For Session id, None *can* be a valid string. Leave as is.
-    print("\tSession:               %s" % args.session_id)
+    print(f"\tSession:               {args.session_id}")
     kwargs["session_id"] = args.session_id
 
     # If the user specified an atlas, make sure it exists.
-    print("\tAtlas:                 %s" % args.atlas)
-    if args.atlas is None or args.atlas.upper() == "NONE":
-        pass
-    else:
+    print(f"\tAtlas:                 {args.atlas}")
+    if not (args.atlas is None or args.atlas.upper() == "NONE"):
         assert os.path.exists(args.atlas), args.atlas + " does not exist!"
         kwargs["atlas"] = args.atlas
 
     # Call the interface.
     interface(**kwargs)
+
+
+def preprocess_func(
+    output_dir,
+    html_path,
+    subject_id,
+    session_id=None,
+    bids_input=None,
+    atlas=None,
+):
+    """Python translation of executivesummary_preproc.sh."""
+    ...
 
 
 def interface(
@@ -265,12 +275,13 @@ def interface(
     atlas=None,
     layout_only=False,
 ):
-
+    """Run the interface."""
     # Most of the data needed is in the summary directory. Also, it is where the
     # preprocessor will make the images and where the layout_builder will write
     # the HTML. We must be able to write to the path.
     if summary_dir is not None:
-        print("summary_dir is %s" % summary_dir)
+        print(f"summary_dir is {summary_dir}")
+
     summary_path, html_path, images_path = init_summary(
         files_path, summary_dir, layout_only
     )
@@ -280,20 +291,32 @@ def interface(
         return
 
     if not layout_only:
-        preproc_cmd = (
-            os.path.dirname(os.path.abspath(__file__)) + "/executivesummary_preproc.sh "
+        preproc_cmd = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "executivesummary_preproc.sh",
         )
-        preproc_cmd += "--output-dir %s " % files_path
-        preproc_cmd += "--html-path %s " % html_path
-        preproc_cmd += "--subject-id %s " % subject_id
+        preproc_cmd += f" --output-dir {files_path}"
+        preproc_cmd += f" --html-path {html_path}"
+        preproc_cmd += f" --subject-id {subject_id}"
         if session_id is not None:
-            preproc_cmd += "--session-id %s " % session_id
+            preproc_cmd += f" --session-id {session_id}"
+
         if func_path is not None:
-            preproc_cmd += "--bids-input %s " % func_path
+            preproc_cmd += f" --bids-input {func_path}"
+
         if atlas is not None:
-            preproc_cmd += "--atlas %s " % atlas
+            preproc_cmd += f" --atlas {atlas}"
 
         subprocess.call(preproc_cmd, shell=True)
+
+        preprocess_func(
+            output_dir=files_path,
+            html_path=html_path,
+            subject_id=subject_id,
+            session_id=session_id,
+            bids_input=func_path,
+            atlas=atlas,
+        )
 
         # Make mosaic(s) for brainsprite(s).
         print("Making mosaic for T1 BrainSprite.")
@@ -305,19 +328,16 @@ def interface(
     # Done with preproc (or skipped it). Call the page layout to make the page.
 
     print("Begin page layout.")
-    kwargs = {
-        "files_path": files_path,
-        "summary_path": summary_path,
-        "html_path": html_path,
-        "images_path": images_path,
-        "subject_id": subject_id,
-        "session_id": session_id,
-    }
-
-    layout_builder(**kwargs)
+    layout_builder(
+        files_path=files_path,
+        summary_path=summary_path,
+        html_path=html_path,
+        images_path=images_path,
+        subject_id=subject_id,
+        session_id=session_id,
+    )
 
 
 if __name__ == "__main__":
-
     _cli()
     print("\nall done!")

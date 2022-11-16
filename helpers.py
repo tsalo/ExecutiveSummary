@@ -1,3 +1,4 @@
+"""Utility functions for the executive summary."""
 import glob
 import os
 import shutil
@@ -5,9 +6,7 @@ from os import path
 
 
 def find_files(seek_dir, pattern):
-    """
-    Finds all files within the directory specified that match
-    the glob-style pattern.
+    """Find all files within the directory specified that match the glob-style pattern.
 
     :parameter: seek_dir: directory to be searched.
     :parameter: pattern: Unix shell pattern for finding files.
@@ -22,10 +21,9 @@ def find_files(seek_dir, pattern):
 
 
 def find_and_copy_files(seek_dir, pattern, output_dir):
-    """
-    Finds all files within the directory specified that match
-    the glob-style pattern. Copies each file to the output
-    directory.
+    """Find all files within the directory specified that match the glob-style pattern.
+
+    Copies each file to the output directory.
 
     :parameter: seek_dir: directory to be searched.
     :parameter: pattern: Unix shell pattern for finding files.
@@ -46,8 +44,8 @@ def find_and_copy_files(seek_dir, pattern, output_dir):
 
 
 def find_and_copy_file(seek_dir, pattern, output_dir):
-    """
-    Finds a single file within seek_dir, using the pattern.
+    """Find a single file within seek_dir, using the pattern.
+
     If found, copies the file to the output_dir.
 
     :parameter: seek_dir: directory to be searched.
@@ -55,7 +53,6 @@ def find_and_copy_file(seek_dir, pattern, output_dir):
     :parameter: output_dir: directory to which to copy the file.
     :return: relative path to copied file, or None.
     """
-
     found_path = find_one_file(seek_dir, pattern)
 
     if found_path:
@@ -71,7 +68,7 @@ def find_and_copy_file(seek_dir, pattern, output_dir):
 
 
 def find_one_file(seek_dir, pattern):
-
+    """Find a single file according to a pattern."""
     one_file = None
 
     # Try to find a file with the pattern given in the directory given.
@@ -84,6 +81,6 @@ def find_one_file(seek_dir, pattern):
         one_file = filelist[0]
     else:
         # TODO: Log info in errorfile.
-        print("info: Found %s files with pattern: %s" % (numfiles, glob_pattern))
+        print(f"info: Found {numfiles} files with pattern: {glob_pattern}")
 
     return one_file

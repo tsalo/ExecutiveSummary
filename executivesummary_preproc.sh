@@ -284,7 +284,7 @@ chmod -R 770 ${html_path} || true
     }
 
 ################## BEGIN #########################
-
+# TAYLOR: These don't get used?!
 wm_mask_L="L_wm_2mm_${subject_id}_mask.nii.gz"
 wm_mask_R="R_wm_2mm_${subject_id}_mask.nii.gz"
 wm_mask="wm_2mm_${subject_id}_mask.nii.gz"
@@ -306,6 +306,7 @@ images_pre=${images_path}/sub-${subject_id}
 if [ -n "${session_id}" ] ; then
     images_pre=${images_pre}_ses-${session_id}
 fi
+# TAYLOR: What is the t1_mask supposed to be? The file isn't available...
 t1_mask=${AtlasSpacePath}/T1w_restore_brain.nii.gz
 
 if [ -z "${atlas}" ] ; then
