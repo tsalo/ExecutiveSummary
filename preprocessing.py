@@ -6,6 +6,8 @@ import shutil
 from nilearn.image import binarize_img
 from nipype.interfaces import fsl
 
+from interfaces import SlicesDir
+
 
 def slicer(in_file, bin_file, view, slice_number, out_file):
     """Stand-in for FSL's slicer command."""
@@ -124,7 +126,7 @@ def create_images_from_brainsprite_scene(Tx, processed_files, brainsprite_scene)
         print(cmd)
 
 
-def make_default_slices_row(base_img, out_png, red_img=None):
+def make_default_slices_row(base_img, out_png, working, red_img=None):
     """Use the default slices made by slicesdir (.4, .5, and .6).
 
     It calls slicesdir, grabs the output png, and cleans up the
@@ -141,25 +143,14 @@ def make_default_slices_row(base_img, out_png, red_img=None):
 
     See https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Miscvis
     """
-    img_file = os.path.basename(base_img)
-    img_png = img_file.replace(".nii.gz", ".png")
-
-    # pushd ${working}
-    # imcp ${base_img} ./${img_file}
-    shutil.copyfile(base_img, img_file)
+    slicesdir = SlicesDir(in_files=[base_img])
 
     if red_img is not None:
-        red_file = os.path.basename(red_img)
-        # imcp ${red_img} ./${red_file}
-        shutil.copyfile(red_img, red_file)
-        # slicesdir -p ${red_file} ${img_file}
-    else:
-        # slicesdir ${img_file}
-        pass
+        slicesdir.inputs.outline_image = red_img
 
-    os.rename(os.path.join(slicesdir, img_png), out_png)
-    # rm -rf slicesdir
-    # popd
+    results = slicesdir.run(cwd=working)
+    img_png = results.outputs.out_files[0]
+    return img_png
 
 
 def preprocess(
@@ -278,8 +269,8 @@ def preprocess(
     else:
         print(f"Registering {os.path.basename(t1_mask)} and atlas file: {atlas}")
         # set -x
-        make_default_slices_row(t1_mask, f"{images_pre}_desc-AtlasInT1w.gif", atlas)
-        make_default_slices_row(atlas, f"{images_pre}_desc-T1wInAtlas.gif", t1_mask)
+        make_default_slices_row(t1_mask, f"{images_pre}_desc-AtlasInT1w.gif", red_img=atlas)
+        make_default_slices_row(atlas, f"{images_pre}_desc-T1wInAtlas.gif", red_img=t1_mask)
         # set +x
 
     # From here on, use the whole T1 file rather than the mask (used above).
@@ -532,18 +523,18 @@ def preprocess(
 
         fMRI_pre = os.path.join(images_path, f"sub-{subject_id}_{fMRIName}")
         # set -x
-        make_default_slices_row(task_img, f"{fMRI_pre}_desc-T1InTask.gif", t1_2_brain)
-        make_default_slices_row(t1_2_brain, f"{fMRI_pre}_desc-TaskInT1.gif", task_img)
+        make_default_slices_row(task_img, f"{fMRI_pre}_desc-T1InTask.gif", red_img=t1_2_brain)
+        make_default_slices_row(t1_2_brain, f"{fMRI_pre}_desc-TaskInT1.gif", red_img=task_img)
         if has_t2:
             make_default_slices_row(
                 task_img,
                 f"{fMRI_pre}_desc-T2InTask.gif",
-                t2_2_brain,
+                red_img=t2_2_brain,
             )
             make_default_slices_row(
                 t2_2_brain,
                 f"{fMRI_pre}_desc-TaskInT2.gif",
-                task_img,
+                red_img=task_img,
             )
 
         # set +x
