@@ -142,7 +142,6 @@ def preprocess(
     atlas=None,
     skip_sprite=False,
 ):
-    # TAYLOR: SECTION 1
     # SET UP ENVIRONMENT VARIABLES
     scriptdir = os.path.dirname(__file__)
     templatedir = os.path.join(scriptdir, "templates")
@@ -172,7 +171,6 @@ def preprocess(
         # The summary directory was supplied, but does not yet exist.
         os.makedirs(html_path)
 
-    # TAYLOR: SECTION 2
     # Make the subfolder for the images. All paths in the html are relative to
     # the html folder, so must img must remain a subfolder to the html folder.
 
@@ -200,19 +198,6 @@ def preprocess(
     os.makedirs(working, exists_ok=True)
     if not os.path.isdir(working):
         raise Exception(f"Unable to write {working}. Permissions?")
-
-    # TAYLOR: END SECTION 2
-
-    # TAYLOR: SECTION 3
-    # TAYLOR: These don't get used?!
-    # wm_mask_L = f"L_wm_2mm_{subject_id}_mask.nii.gz"
-    # wm_mask_R = f"R_wm_2mm_{subject_id}_mask.nii.gz"
-    # wm_mask = f"wm_2mm_{subject_id}_mask.nii.gz"
-    # wm_mask_eroded = f"wm_2mm_{subject_id}_mask_erode.nii.gz"
-    # vent_mask_L = f"L_vent_2mm_{subject_id}_mask.nii.gz"
-    # vent_mask_R = f"R_vent_2mm_{subject_id}_mask.nii.gz"
-    # vent_mask = f"vent_2mm_{subject_id}_mask.nii.gz"
-    # vent_mask_eroded = f"vent_2mm_{subject_id}_mask_eroded.nii.gz"
 
     print("START: executive summary image preprocessing")
 
@@ -328,7 +313,6 @@ def preprocess(
 
     os.remove(pngs_scene)
 
-    # TAYLOR: SECTION 4
     # Make pngs to be used for the brainsprite.
     if brainsprite_template is None:
         # Use default.
@@ -379,11 +363,10 @@ def preprocess(
                 "T2", processed_files, brainsprite_scene
             )
 
-    # TAYLOR: SECTION 5
     # Subcorticals
     subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
     subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
-    # set -x
+
     if not os.path.isfile(subcort_sub):
         if not os.path.join(subcort_atl):
             print("Create subcortical images.")
@@ -391,7 +374,6 @@ def preprocess(
             # The default slices are not as nice for subcorticals as they are for a whole brain.
             # Pick out slices using slicer.
 
-            # pushd ${working}
             shutil.copyfile(subcort_sub, "subcort_sub.nii.gz")
             shutil.copyfile(subcort_atl, "subcort_atl.nii.gz")
 
@@ -402,13 +384,13 @@ def preprocess(
 
             # Make a binarized copy of the subcortical atlas to be used for the outline.
             bin_atl = "bin_subcort_atl.nii.gz"
-            # fslmaths subcort_atl.nii.gz -bin ${bin_atl}
+            # bash code: fslmaths subcort_atl.nii.gz -bin ${bin_atl}
             bin_img = binarize_img("subcort_atl.nii.gz")
             bin_img.to_filename(bin_atl)
 
             # Make a binarized copy of the subject's subcorticals to be used for the outline.
             bin_sub = "bin_subcort_sub.nii.gz"
-            # fslmaths subcort_sub.nii.gz -bin ${bin_sub}
+            # bash code: fslmaths subcort_sub.nii.gz -bin ${bin_sub}
             bin_img = binarize_img("subcort_sub.nii.gz")
             bin_img.to_filename(bin_sub)
 
@@ -469,22 +451,11 @@ def preprocess(
         print(f"Missing {subcort_sub}.")
         print("No subcorticals will be included.")
 
-    # TAYLOR: SECTION 6
     # Tasks
     t1_2_brain = os.path.join(atlas_space_path, "T1w_restore_brain.2.nii.gz")
     t2_2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.2.nii.gz")
     if not os.path.isfile(t2_2_brain):
         print("t2_2_brain not found")
-
-    t1_2_brain_img = ""  # TAYLOR: Added bc these variables aren't defined
-    if os.path.isfile(t1_2_brain_img):
-        print("removing old resampled t1 brain")
-        os.remove(t1_2_brain_img)
-
-    t2_2_brain_img = ""  # TAYLOR: Added bc these variables aren't defined
-    if os.path.isfile(t2_2_brain_img):
-        print("removing old resampled t2 brain")
-        os.remove(t2_2_brain_img)
 
     # Make T1w and T2w task images.
     tasks = sorted(glob.glob(os.path.join(results_path, "*task-*")))
@@ -535,10 +506,8 @@ def preprocess(
                 red_img=task_img,
             )
 
-    # TAYLOR: SECTION 7
     # If the bids-input was supplied and there are func files, slice
     # the bold and sbref_files into pngs so we can display them.
-    # shopt -s nullglob
     if os.path.isdir(bids_input):
         # Slice bold.nii.gz files for tasks into pngs.
         bold_files = sorted(glob.glob(os.path.join(bids_input, "*task-*_bold*.nii*")))
@@ -589,5 +558,3 @@ def preprocess(
 
     else:
         print("No func files. Neither bold nor sbref will be shown.")
-
-    # shopt -u nullglob
