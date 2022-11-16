@@ -9,35 +9,6 @@ from nipype.interfaces import fsl
 from interfaces import PNGAppend, ShowScene, SlicesDir
 
 
-def slicer(in_file, bin_file, view, slice_number, out_file):
-    """Stand-in for FSL's slicer command."""
-    slicer_interface = fsl.Slicer(
-        in_file=in_file,
-        image_edges=bin_file,
-        single_slice=f"-{view}",
-        slice_number=slice_number,
-        out_file=out_file,
-        args="-u -L",
-    )
-    slicer_interface.run()
-
-
-def slicer2(in_file, out_file):
-    """Another stand-in for slicer."""
-    slicer_interface = fsl.Slicer(
-        in_file=in_file,
-        out_file=out_file,
-        args="-u -a",
-    )
-    slicer_interface.run()
-
-
-def pngappend(in_files, out_file):
-    """Stand-in for FSL's pngappend command."""
-    cmd = f"pngappend {' + '.join(in_files)} {out_file}"
-    print(cmd)
-
-
 def build_scene_from_pngs_template(
     t2_path,
     t1_path,
@@ -105,8 +76,11 @@ def build_scene_from_brainsprite_template(
 
 
 def create_images_from_brainsprite_scene(Tx, processed_files, brainsprite_scene):
-    # total_frames=$( grep "SceneInfo Index=" ${brainsprite_scene} | wc -l )
-    total_frames = 0  # TAYLOR: TODO: implement grep stuff
+    # bash code: total_frames=$( grep "SceneInfo Index=" ${brainsprite_scene} | wc -l )
+    with open(brainsprite_scene, "r") as fo:
+        data = fo.read()
+
+    total_frames = data.count("SceneInfo Index=")
 
     for i in range(total_frames):
         out_file = os.path.join(processed_files, f"{Tx}_pngs", f"P_{Tx}_frame_{i}.png")
@@ -455,20 +429,30 @@ def preprocess(
             counter, atlas_in_subcort_pngs, subcort_in_atlas_pngs = 0, [], []
             for view, slice_numbers in SLICES.items():
                 for slice_number in slice_numbers:
+                    # Generate atlas in subcortical figure
                     atlas_in_subcort_png = f"{prefix}_atl_{counter}.png"
-                    slicer(
-                        "subcort_sub.nii.gz",
-                        bin_atl,
-                        f"-{view} {slice_number} {atlas_in_subcort_png} -u -L",
+                    slicer_interface = fsl.Slicer(
+                        in_file="subcort_sub.nii.gz",
+                        image_edges=bin_atl,
+                        single_slice=view,
+                        slice_number=slice_number,
+                        out_file=atlas_in_subcort_png,
+                        args="-u -L",
                     )
+                    slicer_interface.run()
                     atlas_in_subcort_pngs.append(atlas_in_subcort_png)
 
+                    # Generate subcortical in atlas figure
                     subcort_in_atlas_png = f"{prefix}_sub_{counter}.png"
-                    slicer(
-                        "subcort_atl.nii.gz",
-                        bin_sub,
-                        f"-{view} {slice_number} {subcort_in_atlas_png} -u -L",
+                    slicer_interface = fsl.Slicer(
+                        in_file="subcort_atl.nii.gz",
+                        image_edges=bin_sub,
+                        single_slice=view,
+                        slice_number=slice_number,
+                        out_file=subcort_in_atlas_png,
+                        args="-u -L",
                     )
+                    slicer_interface.run()
                     subcort_in_atlas_pngs.append(subcort_in_atlas_png)
 
                     counter += 1
@@ -572,7 +556,12 @@ def preprocess(
             png_name = os.path.basename(BOLD)
             png_name = png_name.replace(".nii.gz", ".png")
             png_name = png_name.replace(".nii", ".png")
-            slicer2(BOLD, os.path.join(images_path, png_name))
+            slicer_interface = fsl.Slicer(
+                in_file=BOLD,
+                out_file=os.path.join(images_path, png_name),
+                args="-u -a",
+            )
+            slicer_interface.run()
 
         # Slice sbref.nii.gz files for tasks into pngs.
         sbrefs = sorted(glob.glob(os.path.join(bids_input, "*task-*_sbref*.nii*")))
@@ -587,14 +576,24 @@ def preprocess(
                 # Get the task name and number from the parent.
                 task_name = os.path.basename(os.path.dirname(SCOUT))
                 png_name = f"sub-{subject_id}_{task_name}_ref.png"
-                slicer2(SCOUT, os.path.join(images_path, png_name))
+                slicer_interface = fsl.Slicer(
+                    in_file=SCOUT,
+                    out_file=os.path.join(images_path, png_name),
+                    args="-u -a",
+                )
+                slicer_interface.run()
 
         else:
             for SBREF in sbrefs:
                 png_name = os.path.basename(SBREF)
                 png_name = png_name.replace(".nii.gz", ".png")
                 png_name = png_name.replace(".nii", ".png")
-                slicer2(SBREF, os.path.join(images_path, png_name))
+                slicer_interface = fsl.Slicer(
+                    in_file=SBREF,
+                    out_file=os.path.join(images_path, png_name),
+                    args="-u -a",
+                )
+                slicer_interface.run()
 
     else:
         print("No func files. Neither BOLD nor SBREF will be shown.")
