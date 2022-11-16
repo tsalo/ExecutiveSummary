@@ -57,8 +57,6 @@ def build_scene_from_pngs_template(
 
     takes the following arguments: t2_path t1_path rp_path lp_path rw_path lw_path
     """
-    # Make a copy of the scene template as we will be making modifications.
-    shutil.copyfile(pngs_template, pngs_scene)
     paths = {
         "T2_IMG": t2_path,
         "T1_IMG": t1_path,
@@ -67,15 +65,18 @@ def build_scene_from_pngs_template(
         "RWHITE": rw_path,
         "LWHITE": lw_path,
     }
+
+    with open(pngs_template, "r") as fo:
+        data = fo.read()
+
     for template, path in paths.items():
         # Replace templated pathnames and filenames in local copy.
-        # sed -i "s!${templates[$i]}_PATH!${paths[$i]}!g" ${pngs_scene}
-        # filename=$(basename "${paths[$i]}")
+        data = data.replace(f"{template}_PATH", path)
         filename = os.path.basename(path)
-        # sed -i "s!${templates[$i]}_NAME!${filename}!g" ${pngs_scene}
+        data = data.replace(f"{template}_NAME", filename)
 
-        # sed -i "s!T2_IMG_PATH!/path/to/file.nii.gz!g"
-    ...
+    with open(pngs_scene, "w") as fo:
+        fo.write(data)
 
 
 def build_scene_from_brainsprite_template(
@@ -87,9 +88,6 @@ def build_scene_from_brainsprite_template(
     brainsprite_template,
     brainsprite_scene,
 ):
-    # Make a copy of the brainsprite_scene template as we will be making modifications.
-    shutil.copyfile(brainsprite_template, brainsprite_scene)
-
     paths = {
         "TX_IMG": tx_img,
         "R_PIAL": rp_path,
@@ -97,14 +95,18 @@ def build_scene_from_brainsprite_template(
         "R_WHITE": rw_path,
         "L_WHITE": lw_path,
     }
+
+    with open(brainsprite_template, "r") as fo:
+        data = fo.read()
+
     for template, path in paths.items():
         # Replace templated pathnames and filenames in local copy.
-        print(f"sed -i 's!{template}_NAME_and_PATH!{path}!g' {brainsprite_scene}")
-        # sed -i "s!${templates[$i]}_NAME_and_PATH!${paths[$i]}!g" ${brainsprite_scene}
-        # filename=$(basename "${paths[$i]}")
+        data = data.replace(f"{template}_NAME_and_PATH", path)
         filename = os.path.basename(path)
-        print(f"sed -i 's!{template}_NAME!{filename}!g' {brainsprite_scene}")
-        # sed -i "s!${templates[$i]}_NAME!${filename}!g" ${brainsprite_scene}
+        data = data.replace(f"{template}_NAME", filename)
+
+    with open(brainsprite_scene, "w") as fo:
+        fo.write(data)
 
 
 def create_image_from_pngs_scene(out, scenenum, pngs_scene):
