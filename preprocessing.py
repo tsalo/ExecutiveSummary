@@ -4,18 +4,30 @@ import os
 import shutil
 
 from nilearn.image import binarize_img
+from nipype.interfaces import fsl
 
 
 def slicer(in_file, bin_file, view, slice_number, out_file):
     """Stand-in for FSL's slicer command."""
-    cmd = f"slicer {in_file} {bin_file} -{view} {slice_number} {out_file} -u -L"
-    print(cmd)
+    slicer_interface = fsl.Slicer(
+        in_file=in_file,
+        image_edges=bin_file,
+        single_slice=f"-{view}",
+        slice_number=slice_number,
+        out_file=out_file,
+        args="-u -L",
+    )
+    slicer_interface.run()
 
 
 def slicer2(in_file, out_file):
     """Another stand-in for slicer."""
-    cmd = f"slicer {in_file} -u -a {out_file}"
-    print(cmd)
+    slicer_interface = fsl.Slicer(
+        in_file=in_file,
+        out_file=out_file,
+        args="-u -a",
+    )
+    slicer_interface.run()
 
 
 def pngappend(in_files, out_file):
@@ -25,9 +37,7 @@ def pngappend(in_files, out_file):
 
 
 def print_error():
-    """Prints the error message and the line of code, where the error occurred;
-    then Exits the script.
-    """
+    """Prints the error and the line of code, where the error occurred; then Exits the script."""
     ...
 
 
@@ -336,7 +346,9 @@ def preprocess(
                 "create_image_from_pngs_scene "
                 f"'{images_pre}_{image_names[scenenum]}.png' {scenenum}"
             )
-            create_image_from_pngs_scene(f"{images_pre}_{image_names[scenenum]}.png", scenenum)
+            create_image_from_pngs_scene(
+                f"{images_pre}_{image_names[scenenum]}.png", scenenum
+            )
 
     # rm -rf ${pngs_scene}
 
@@ -391,7 +403,9 @@ def preprocess(
                 brainsprite_template,
                 brainsprite_scene,
             )
-            create_images_from_brainsprite_scene("T2", processed_files, brainsprite_scene)
+            create_images_from_brainsprite_scene(
+                "T2", processed_files, brainsprite_scene
+            )
 
     # TAYLOR: SECTION 5
     # Subcorticals
@@ -501,21 +515,36 @@ def preprocess(
         task_img = os.path.join(Results, fMRIName, f"{fMRIName}.nii.gz")
 
         # Use the first task image to make the resampled brain.
-        cmd = f"flirt -in {t1_brain} -ref {task_img} -applyxfm -out {t1_2_brain}"
-        print(cmd)
-        print(f"result of flirt is in {t1_2_brain}")
+        flt = fsl.FLIRT()
+        flt.inputs.in_file = t1_brain
+        flt.inputs.reference = task_img
+        flt.inputs.apply_xfm = True
+        flt.inputs.out_file = t1_2_brain
+        flt.run()
+
         if has_t2:
-            cmd = f"flirt -in {t2_brain} -ref {task_img} -applyxfm -out {t2_2_brain}"
-            print(cmd)
-            print(f"result of flirt is in {t2_2_brain}")
+            flt = fsl.FLIRT()
+            flt.inputs.in_file = t2_brain
+            flt.inputs.reference = task_img
+            flt.inputs.apply_xfm = True
+            flt.inputs.out_file = t2_2_brain
+            flt.run()
 
         fMRI_pre = os.path.join(images_path, f"sub-{subject_id}_{fMRIName}")
         # set -x
         make_default_slices_row(task_img, f"{fMRI_pre}_desc-T1InTask.gif", t1_2_brain)
         make_default_slices_row(t1_2_brain, f"{fMRI_pre}_desc-TaskInT1.gif", task_img)
         if has_t2:
-            make_default_slices_row(task_img, f"{fMRI_pre}_desc-T2InTask.gif", t2_2_brain)
-            make_default_slices_row(t2_2_brain, f"{fMRI_pre}_desc-TaskInT2.gif", task_img)
+            make_default_slices_row(
+                task_img,
+                f"{fMRI_pre}_desc-T2InTask.gif",
+                t2_2_brain,
+            )
+            make_default_slices_row(
+                t2_2_brain,
+                f"{fMRI_pre}_desc-TaskInT2.gif",
+                task_img,
+            )
 
         # set +x
 
@@ -540,7 +569,9 @@ def preprocess(
 
         if count == 0:
             # There are no SBRefs; use scout files for references.
-            scouts = sorted(glob.glob(os.path.join(processed_files, "task-*", "Scout_orig.nii.gz")))
+            scouts = sorted(
+                glob.glob(os.path.join(processed_files, "task-*", "Scout_orig.nii.gz"))
+            )
             for SCOUT in scouts:
                 # Get the task name and number from the parent.
                 task_name = os.path.basename(os.path.dirname(SCOUT))
