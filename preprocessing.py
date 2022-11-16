@@ -160,7 +160,6 @@ def preprocess(
     bids_input=None,
     atlas=None,
     skip_sprite=False,
-    group="fnl_lab",
 ):
     # TAYLOR: SECTION 1
     # SET UP ENVIRONMENT VARIABLES

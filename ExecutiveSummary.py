@@ -307,7 +307,6 @@ def interface(
             bids_input=func_path,
             atlas=atlas,
             skip_sprite=False,  # non-debug mode
-            group="fnl_lab",
         )
 
         # Make mosaic(s) for brainsprite(s).
