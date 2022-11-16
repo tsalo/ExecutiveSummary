@@ -75,7 +75,11 @@ def build_scene_from_brainsprite_template(
         fo.write(data)
 
 
-def create_images_from_brainsprite_scene(Tx, processed_files, brainsprite_scene):
+def create_images_from_brainsprite_scene(
+    image_type,
+    processed_files,
+    brainsprite_scene,
+):
     # bash code: total_frames=$( grep "SceneInfo Index=" ${brainsprite_scene} | wc -l )
     with open(brainsprite_scene, "r") as fo:
         data = fo.read()
@@ -83,7 +87,11 @@ def create_images_from_brainsprite_scene(Tx, processed_files, brainsprite_scene)
     total_frames = data.count("SceneInfo Index=")
 
     for i in range(total_frames):
-        out_file = os.path.join(processed_files, f"{Tx}_pngs", f"P_{Tx}_frame_{i}.png")
+        out_file = os.path.join(
+            processed_files,
+            f"{image_type}_pngs",
+            f"P_{image_type}_frame_{i}.png",
+        )
 
         show_scene = ShowScene(
             scene_file=brainsprite_scene,
@@ -144,10 +152,10 @@ def preprocess(
     if not os.path.isdir(processed_files):
         raise Exception(f"Directory does not exist: {processed_files}")
 
-    AtlasSpaceFolder = "MNINonLinear"  # defined in setup_env.sh
-    AtlasSpacePath = os.path.join(processed_files, AtlasSpaceFolder)
-    Results = os.path.join(AtlasSpacePath, "Results")
-    ROIs = os.path.join(AtlasSpacePath, "ROIs")
+    atlas_space_folder = "MNINonLinear"  # defined in setup_env.sh
+    atlas_space_path = os.path.join(processed_files, atlas_space_folder)
+    results_path = os.path.join(atlas_space_path, "Results")
+    rois_path = os.path.join(atlas_space_path, "ROIs")
 
     if not atlas:
         print("Use default atlas")
@@ -214,7 +222,7 @@ def preprocess(
         images_pre += f"_ses-{session_id}"
 
     # TAYLOR: What is the t1_mask supposed to be? The file isn't available...
-    t1_mask = os.path.join(AtlasSpacePath, "T1w_restore_brain.nii.gz")
+    t1_mask = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
 
     if atlas is None:
         print(
@@ -237,8 +245,8 @@ def preprocess(
         )
 
     # From here on, use the whole T1 file rather than the mask (used above).
-    t1 = os.path.join(AtlasSpacePath, "T1w_restore.nii.gz")
-    t2 = os.path.join(AtlasSpacePath, "T2w_restore.nii.gz")
+    t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
+    t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
     has_t2 = True
     if not os.path.isfile(t2):
         print("t2 not found; using t1")
@@ -246,27 +254,27 @@ def preprocess(
         t2 = t1
 
     rw = os.path.join(
-        AtlasSpacePath,
+        atlas_space_path,
         "fsaverage_LR32k",
         f"{subject_id}.R.white.32k_fs_LR.surf.gii",
     )
     rp = os.path.join(
-        AtlasSpacePath,
+        atlas_space_path,
         "fsaverage_LR32k",
         f"{subject_id}.R.pial.32k_fs_LR.surf.gii",
     )
     lw = os.path.join(
-        AtlasSpacePath,
+        atlas_space_path,
         "fsaverage_LR32k",
         f"{subject_id}.L.white.32k_fs_LR.surf.gii",
     )
     lp = os.path.join(
-        AtlasSpacePath,
+        atlas_space_path,
         "fsaverage_LR32k",
         f"{subject_id}.L.pial.32k_fs_LR.surf.gii",
     )
-    t1_brain = os.path.join(AtlasSpacePath, "T1w_restore_brain.nii.gz")
-    t2_brain = os.path.join(AtlasSpacePath, "T2w_restore_brain.nii.gz")
+    t1_brain = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
+    t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
     if not os.path.isfile(t2_brain):
         print("t2_brain not found")
 
@@ -367,12 +375,14 @@ def preprocess(
                 brainsprite_template,
                 brainsprite_scene,
             )
-            create_images_from_brainsprite_scene("T2", processed_files, brainsprite_scene)
+            create_images_from_brainsprite_scene(
+                "T2", processed_files, brainsprite_scene
+            )
 
     # TAYLOR: SECTION 5
     # Subcorticals
-    subcort_sub = os.path.join(ROIs, "sub2atl_ROI.2.nii.gz")
-    subcort_atl = os.path.join(ROIs, "Atlas_ROIs.2.nii.gz")
+    subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
+    subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
     # set -x
     if not os.path.isfile(subcort_sub):
         if not os.path.join(subcort_atl):
@@ -402,13 +412,13 @@ def preprocess(
             bin_img = binarize_img("subcort_sub.nii.gz")
             bin_img.to_filename(bin_sub)
 
-            SLICES = {
+            slices_to_plot = {
                 "x": [36, 45, 52],  # sagittal
                 "y": [43, 54, 65],  # coronal
                 "z": [23, 33, 39],  # axial
             }
             counter, atlas_in_subcort_pngs, subcort_in_atlas_pngs = 0, [], []
-            for view, slice_numbers in SLICES.items():
+            for view, slice_numbers in slices_to_plot.items():
                 for slice_number in slice_numbers:
                     # Generate atlas in subcortical figure
                     atlas_in_subcort_png = f"{prefix}_atl_{counter}.png"
@@ -461,8 +471,8 @@ def preprocess(
 
     # TAYLOR: SECTION 6
     # Tasks
-    t1_2_brain = os.path.join(AtlasSpacePath, "T1w_restore_brain.2.nii.gz")
-    t2_2_brain = os.path.join(AtlasSpacePath, "T2w_restore_brain.2.nii.gz")
+    t1_2_brain = os.path.join(atlas_space_path, "T1w_restore_brain.2.nii.gz")
+    t2_2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.2.nii.gz")
     if not os.path.isfile(t2_2_brain):
         print("t2_2_brain not found")
 
@@ -477,12 +487,12 @@ def preprocess(
         os.remove(t2_2_brain_img)
 
     # Make T1w and T2w task images.
-    tasks = sorted(glob.glob(os.path.join(Results, "*task-*")))
+    tasks = sorted(glob.glob(os.path.join(results_path, "*task-*")))
     tasks = [t for t in tasks if os.path.isdir(t)]
     for task in tasks:
-        fMRIName = os.path.basename(task)
-        print(f"Make images for {fMRIName}")
-        task_img = os.path.join(Results, fMRIName, f"{fMRIName}.nii.gz")
+        task_name = os.path.basename(task)
+        print(f"Make images for {task_name}")
+        task_img = os.path.join(results_path, task_name, f"{task_name}.nii.gz")
 
         # Use the first task image to make the resampled brain.
         # TAYLOR: TODO: Replace with ANTS' ApplyTransforms
@@ -502,26 +512,26 @@ def preprocess(
             flt.inputs.out_file = t2_2_brain
             flt.run()
 
-        fMRI_pre = os.path.join(images_path, f"sub-{subject_id}_{fMRIName}")
+        task_prefix = os.path.join(images_path, f"sub-{subject_id}_{task_name}")
         make_default_slices_row(
             task_img,
-            f"{fMRI_pre}_desc-T1InTask.gif",
+            f"{task_prefix}_desc-T1InTask.gif",
             red_img=t1_2_brain,
         )
         make_default_slices_row(
             t1_2_brain,
-            f"{fMRI_pre}_desc-TaskInT1.gif",
+            f"{task_prefix}_desc-TaskInT1.gif",
             red_img=task_img,
         )
         if has_t2:
             make_default_slices_row(
                 task_img,
-                f"{fMRI_pre}_desc-T2InTask.gif",
+                f"{task_prefix}_desc-T2InTask.gif",
                 red_img=t2_2_brain,
             )
             make_default_slices_row(
                 t2_2_brain,
-                f"{fMRI_pre}_desc-TaskInT2.gif",
+                f"{task_prefix}_desc-TaskInT2.gif",
                 red_img=task_img,
             )
 
