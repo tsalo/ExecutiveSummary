@@ -174,33 +174,6 @@ def preprocess(
     results_path = os.path.join(atlas_space_path, "Results")
     rois_path = os.path.join(atlas_space_path, "ROIs")
 
-    # Select input files
-    t1_mask = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
-    t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
-    t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
-    rw = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.R.white.32k_fs_LR.surf.gii",
-    )
-    rp = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.R.pial.32k_fs_LR.surf.gii",
-    )
-    lw = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.L.white.32k_fs_LR.surf.gii",
-    )
-    lp = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.L.pial.32k_fs_LR.surf.gii",
-    )
-    t1_brain = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
-    t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
-
     if not atlas:
         print("Use default atlas")
         # Note: there is one of these in $FSLDIR/data/standard, but if differs. Why?
@@ -241,10 +214,50 @@ def preprocess(
 
     print("START: executive summary image preprocessing")
 
+    # Select input files
+    t1_mask = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
+    t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
+    t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
+    rw = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.R.white.32k_fs_LR.surf.gii",
+    )
+    rp = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.R.pial.32k_fs_LR.surf.gii",
+    )
+    lw = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.L.white.32k_fs_LR.surf.gii",
+    )
+    lp = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.L.pial.32k_fs_LR.surf.gii",
+    )
+    t1_brain = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
+    t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
+
+    # Subcorticals
+    subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
+    subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
+
+    # Temporary files
+    t1_2_brain = os.path.join(work_dir, "T1w_restore_brain.2.nii.gz")
+    t2_2_brain = os.path.join(work_dir, "T2w_restore_brain.2.nii.gz")
+    # Temporary modified scene file. Will be removed by end of workflow.
+    pngs_scene = os.path.join(work_dir, "pngs_scene.scene")
+    # Temporary modified scene file. Will be removed by end of workflow.
+    t1w_brainsprite_scene = os.path.join(work_dir, "t1_bs_scene.scene")
+    t2w_brainsprite_scene = os.path.join(work_dir, "t2_bs_scene.scene")
+
     # Anat
-    images_pre = os.path.join(images_path, f"sub-{subject_id}")
+    images_prefix = f"sub-{subject_id}"
     if session_id is not None:
-        images_pre += f"_ses-{session_id}"
+        images_prefix += f"_ses-{session_id}"
 
     if atlas is None:
         print(
@@ -257,12 +270,12 @@ def preprocess(
         print(f"Registering {os.path.basename(t1_mask)} and atlas file: {atlas}")
         make_default_slices_row(
             t1_mask,
-            f"{images_pre}_desc-AtlasInT1w.gif",
+            os.path.join(images_path, f"{images_prefix}_desc-AtlasInT1w.gif"),
             red_img=atlas,
         )
         make_default_slices_row(
             atlas,
-            f"{images_pre}_desc-T1wInAtlas.gif",
+            os.path.join(images_path, f"{images_prefix}_desc-T1wInAtlas.gif"),
             red_img=t1_mask,
         )
 
@@ -270,7 +283,6 @@ def preprocess(
     if not os.path.isfile(t2):
         print("t2 not found; using t1")
         has_t2 = False
-        t2 = t1
 
     if not os.path.isfile(t2_brain):
         print("t2_brain not found")
@@ -280,10 +292,8 @@ def preprocess(
         # Use default.
         pngs_template = os.path.join(templatedir, "image_template_temp.scene")
 
-    # Temporary modified scene file. Will be removed by end of workflow.
-    pngs_scene = os.path.join(work_dir, "pngs_scene.scene")
     build_scene_from_pngs_template(
-        t2,
+        t2 if has_t2 else t1,
         t1,
         rp,
         lp,
@@ -318,7 +328,7 @@ def preprocess(
         show_scene = ShowScene(
             scene_file=pngs_scene,
             scene_name_or_number=i_scene + 1,
-            out_file=f"{images_pre}_{image_name}.png",
+            out_file=os.path.join(images_path, f"{images_prefix}_{image_name}.png"),
             image_width=900,
             image_height=800,
         )
@@ -345,8 +355,6 @@ def preprocess(
 
     else:
         # Create brainsprite images for T1
-        # Temporary modified scene file. Will be removed by end of workflow.
-        brainsprite_scene = os.path.join(work_dir, "t1_bs_scene.scene")
         build_scene_from_brainsprite_template(
             t1,
             rp,
@@ -354,13 +362,12 @@ def preprocess(
             rw,
             lw,
             brainsprite_template,
-            brainsprite_scene,
+            t1w_brainsprite_scene,
         )
-        create_images_from_brainsprite_scene("T1", output_dir, brainsprite_scene)
+        create_images_from_brainsprite_scene("T1", output_dir, t1w_brainsprite_scene)
 
         if has_t2:
             # Create brainsprite images for T2
-            brainsprite_scene = os.path.join(work_dir, "t2_bs_scene.scene")
             build_scene_from_brainsprite_template(
                 t2,
                 rp,
@@ -368,17 +375,13 @@ def preprocess(
                 rw,
                 lw,
                 brainsprite_template,
-                brainsprite_scene,
+                t2w_brainsprite_scene,
             )
             create_images_from_brainsprite_scene(
                 "T2",
                 output_dir,
-                brainsprite_scene,
+                t2w_brainsprite_scene,
             )
-
-    # Subcorticals
-    subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
-    subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
 
     if not os.path.isfile(subcort_sub):
         if not os.path.isfile(subcort_atl):
@@ -447,13 +450,13 @@ def preprocess(
 
             append_atlas_in_subcort = PNGAppend(
                 in_files=atlas_in_subcort_pngs,
-                out_file="{images_pre}_desc-AtlasInSubcort.gif",
+                out_file=os.path.join(images_path, "{images_prefix}_desc-AtlasInSubcort.gif"),
             )
             append_atlas_in_subcort.run()
 
             append_subcort_in_atlas = PNGAppend(
                 in_files=subcort_in_atlas_pngs,
-                out_file=f"{images_pre}_desc-SubcortInAtlas.gif",
+                out_file=os.path.join(images_path, f"{images_prefix}_desc-SubcortInAtlas.gif"),
             )
             append_subcort_in_atlas.run()
 
@@ -463,10 +466,6 @@ def preprocess(
     else:
         print(f"Missing {subcort_sub}.")
         print("No subcorticals will be included.")
-
-    # Tasks
-    t1_2_brain = os.path.join(work_dir, "T1w_restore_brain.2.nii.gz")
-    t2_2_brain = os.path.join(work_dir, "T2w_restore_brain.2.nii.gz")
 
     # Make T1w and T2w task images.
     tasks = sorted(glob.glob(os.path.join(results_path, "*task-*")))
@@ -521,6 +520,7 @@ def preprocess(
     # the bold and sbref_files into pngs so we can display them.
     if os.path.isdir(bids_input):
         # Slice bold.nii.gz files for tasks into pngs.
+        # TAYLOR: What about boldref files?
         bold_files = sorted(glob.glob(os.path.join(bids_input, "*task-*_bold*.nii*")))
         for bold_file in bold_files:
             png_name = os.path.basename(bold_file)
