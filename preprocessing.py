@@ -77,7 +77,7 @@ def build_scene_from_brainsprite_template(
 
 def create_images_from_brainsprite_scene(
     image_type,
-    processed_files,
+    output_dir,
     brainsprite_scene,
 ):
     # bash code: total_frames=$( grep "SceneInfo Index=" ${brainsprite_scene} | wc -l )
@@ -88,7 +88,7 @@ def create_images_from_brainsprite_scene(
 
     for i in range(total_frames):
         out_file = os.path.join(
-            processed_files,
+            output_dir,
             f"{image_type}_pngs",
             f"P_{image_type}_frame_{i}.png",
         )
@@ -164,15 +164,42 @@ def preprocess(
     scriptdir = os.path.dirname(__file__)
     templatedir = os.path.join(scriptdir, "templates")
 
-    # Use the command line args to setup the requied paths
-    processed_files = output_dir
-    if not os.path.isdir(processed_files):
-        raise Exception(f"Directory does not exist: {processed_files}")
+    # Use the command line args to set up the requied paths
+    if not os.path.isdir(output_dir):
+        raise Exception(f"Directory does not exist: {output_dir}")
 
-    atlas_space_folder = "MNINonLinear"  # defined in setup_env.sh
-    atlas_space_path = os.path.join(processed_files, atlas_space_folder)
+    # Template subfolders is defined in setup_env.sh
+    # Seems to be location of all MNI-space preprocessed derivatives
+    atlas_space_path = os.path.join(output_dir, "MNINonLinear")
     results_path = os.path.join(atlas_space_path, "Results")
     rois_path = os.path.join(atlas_space_path, "ROIs")
+
+    # Select input files
+    t1_mask = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
+    t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
+    t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
+    rw = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.R.white.32k_fs_LR.surf.gii",
+    )
+    rp = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.R.pial.32k_fs_LR.surf.gii",
+    )
+    lw = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.L.white.32k_fs_LR.surf.gii",
+    )
+    lp = os.path.join(
+        atlas_space_path,
+        "fsaverage_LR32k",
+        f"{subject_id}.L.pial.32k_fs_LR.surf.gii",
+    )
+    t1_brain = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
+    t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
 
     if not atlas:
         print("Use default atlas")
@@ -183,7 +210,7 @@ def preprocess(
 
     if html_path is None:
         # The summary directory was not supplied, write to the output-dir ('files').
-        html_path = os.path.join(processed_files, "executivesummary")
+        html_path = os.path.join(output_dir, "executivesummary")
 
     # The summary directory was supplied, but does not yet exist.
     os.makedirs(html_path, exist_ok=True)
@@ -219,9 +246,6 @@ def preprocess(
     if session_id is not None:
         images_pre += f"_ses-{session_id}"
 
-    # TAYLOR: What is the t1_mask supposed to be? The file isn't available...
-    t1_mask = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
-
     if atlas is None:
         print(
             "The atlas argument was not supplied. Cannot create atlas-in-t1 or t1-in-atlas"
@@ -243,35 +267,11 @@ def preprocess(
         )
 
     # From here on, use the whole T1 file rather than the mask (used above).
-    t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
-    t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
     if not os.path.isfile(t2):
         print("t2 not found; using t1")
         has_t2 = False
         t2 = t1
 
-    rw = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.R.white.32k_fs_LR.surf.gii",
-    )
-    rp = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.R.pial.32k_fs_LR.surf.gii",
-    )
-    lw = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.L.white.32k_fs_LR.surf.gii",
-    )
-    lp = os.path.join(
-        atlas_space_path,
-        "fsaverage_LR32k",
-        f"{subject_id}.L.pial.32k_fs_LR.surf.gii",
-    )
-    t1_brain = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
-    t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
     if not os.path.isfile(t2_brain):
         print("t2_brain not found")
 
@@ -280,7 +280,8 @@ def preprocess(
         # Use default.
         pngs_template = os.path.join(templatedir, "image_template_temp.scene")
 
-    pngs_scene = os.path.join(processed_files, "pngs_scene.scene")
+    # Temporary modified scene file. Will be removed by end of workflow.
+    pngs_scene = os.path.join(work_dir, "pngs_scene.scene")
     build_scene_from_pngs_template(
         t2,
         t1,
@@ -344,7 +345,8 @@ def preprocess(
 
     else:
         # Create brainsprite images for T1
-        brainsprite_scene = os.path.join(processed_files, "t1_bs_scene.scene")
+        # Temporary modified scene file. Will be removed by end of workflow.
+        brainsprite_scene = os.path.join(work_dir, "t1_bs_scene.scene")
         build_scene_from_brainsprite_template(
             t1,
             rp,
@@ -354,11 +356,11 @@ def preprocess(
             brainsprite_template,
             brainsprite_scene,
         )
-        create_images_from_brainsprite_scene("T1", processed_files, brainsprite_scene)
+        create_images_from_brainsprite_scene("T1", output_dir, brainsprite_scene)
 
         if has_t2:
             # Create brainsprite images for T2
-            brainsprite_scene = os.path.join(processed_files, "t2_bs_scene.scene")
+            brainsprite_scene = os.path.join(work_dir, "t2_bs_scene.scene")
             build_scene_from_brainsprite_template(
                 t2,
                 rp,
@@ -370,7 +372,7 @@ def preprocess(
             )
             create_images_from_brainsprite_scene(
                 "T2",
-                processed_files,
+                output_dir,
                 brainsprite_scene,
             )
 
@@ -390,19 +392,17 @@ def preprocess(
             shutil.copyfile(subcort_sub, subcort_sub_temp)
             shutil.copyfile(subcort_atl, subcort_atl_temp)
 
-            prefix = "slice"
-
             # slices/slicer does not do well trying to make the red outline when it
             # cannot find the edges, so cannot use the ROI files with some low intensities.
 
             # Make a binarized copy of the subcortical atlas to be used for the outline.
-            bin_atl = "bin_subcort_atl.nii.gz"
+            bin_atl = os.path.join(work_dir, "bin_subcort_atl.nii.gz")
             # bash code: fslmaths subcort_atl.nii.gz -bin ${bin_atl}
             bin_img = binarize_img(subcort_atl_temp)
             bin_img.to_filename(bin_atl)
 
             # Make a binarized copy of the subject's subcorticals to be used for the outline.
-            bin_sub = "bin_subcort_sub.nii.gz"
+            bin_sub = bin_atl = os.path.join(work_dir, "bin_subcort_sub.nii.gz")
             # bash code: fslmaths subcort_sub.nii.gz -bin ${bin_sub}
             bin_img = binarize_img(subcort_sub_temp)
             bin_img.to_filename(bin_sub)
@@ -416,7 +416,7 @@ def preprocess(
             for view, slice_numbers in slices_to_plot.items():
                 for slice_number in slice_numbers:
                     # Generate atlas in subcortical figure
-                    atlas_in_subcort_png = f"{prefix}_atl_{counter}.png"
+                    atlas_in_subcort_png = f"slice_atl_{counter}.png"
                     # TAYLOR: TODO: Figure out a way not to use FSL
                     slicer_interface = fsl.Slicer(
                         in_file=subcort_sub_temp,
@@ -430,7 +430,7 @@ def preprocess(
                     atlas_in_subcort_pngs.append(atlas_in_subcort_png)
 
                     # Generate subcortical in atlas figure
-                    subcort_in_atlas_png = f"{prefix}_sub_{counter}.png"
+                    subcort_in_atlas_png = f"slice_sub_{counter}.png"
                     # TAYLOR: TODO: Figure out a way not to use FSL
                     slicer_interface = fsl.Slicer(
                         in_file=subcort_atl_temp,
@@ -494,26 +494,26 @@ def preprocess(
             flt.inputs.out_file = t2_2_brain
             flt.run()
 
-        task_prefix = os.path.join(images_path, f"sub-{subject_id}_{task_name}")
+        task_prefix = f"sub-{subject_id}_{task_name}"
         make_default_slices_row(
             task_img,
-            f"{task_prefix}_desc-T1InTask.gif",
+            os.path.join(images_path, f"{task_prefix}_desc-T1InTask.gif"),
             red_img=t1_2_brain,
         )
         make_default_slices_row(
             t1_2_brain,
-            f"{task_prefix}_desc-TaskInT1.gif",
+            os.path.join(images_path, f"{task_prefix}_desc-TaskInT1.gif"),
             red_img=task_img,
         )
         if has_t2:
             make_default_slices_row(
                 task_img,
-                f"{task_prefix}_desc-T2InTask.gif",
+                os.path.join(images_path, f"{task_prefix}_desc-T2InTask.gif"),
                 red_img=t2_2_brain,
             )
             make_default_slices_row(
                 t2_2_brain,
-                f"{task_prefix}_desc-TaskInT2.gif",
+                os.path.join(images_path, f"{task_prefix}_desc-TaskInT2.gif"),
                 red_img=task_img,
             )
 
@@ -526,10 +526,11 @@ def preprocess(
             png_name = os.path.basename(bold_file)
             png_name = png_name.replace(".nii.gz", ".png")
             png_name = png_name.replace(".nii", ".png")
+            png_file = os.path.join(images_path, png_name)
             # TAYLOR: TODO: Figure out a way not to use FSL
             slicer_interface = fsl.Slicer(
                 in_file=bold_file,
-                out_file=os.path.join(images_path, png_name),
+                out_file=png_file,
                 args="-u -a",
             )
             slicer_interface.run()
@@ -537,32 +538,34 @@ def preprocess(
         # Slice sbref.nii.gz files for tasks into pngs.
         sbref_files = sorted(glob.glob(os.path.join(bids_input, "*task-*_sbref*.nii*")))
 
-        if len(sbref_files) == 0:
-            # There are no SBRefs; use scout files for references.
-            scout_files = sorted(
-                glob.glob(os.path.join(processed_files, "task-*", "Scout_orig.nii.gz"))
-            )
-            for scout_file in scout_files:
-                # Get the task name and number from the parent.
-                task_name = os.path.basename(os.path.dirname(scout_file))
-                png_name = f"sub-{subject_id}_{task_name}_ref.png"
+        if len(sbref_files) > 0:
+            for sbref_file in sbref_files:
+                png_name = os.path.basename(sbref_file)
+                png_name = png_name.replace(".nii.gz", ".png")
+                png_name = png_name.replace(".nii", ".png")
+                png_file = os.path.join(images_path, png_name)
                 # TAYLOR: TODO: Figure out a way not to use FSL
                 slicer_interface = fsl.Slicer(
-                    in_file=scout_file,
-                    out_file=os.path.join(images_path, png_name),
+                    in_file=sbref_file,
+                    out_file=png_file,
                     args="-u -a",
                 )
                 slicer_interface.run()
 
         else:
-            for sbref_file in sbref_files:
-                png_name = os.path.basename(sbref_file)
-                png_name = png_name.replace(".nii.gz", ".png")
-                png_name = png_name.replace(".nii", ".png")
+            # There are no SBRefs; use scout files for references.
+            scout_files = sorted(
+                glob.glob(os.path.join(output_dir, "task-*", "Scout_orig.nii.gz"))
+            )
+            for scout_file in scout_files:
+                # Get the task name and number from the parent.
+                task_name = os.path.basename(os.path.dirname(scout_file))
+                png_name = f"sub-{subject_id}_{task_name}_ref.png"
+                png_file = os.path.join(images_path, png_name)
                 # TAYLOR: TODO: Figure out a way not to use FSL
                 slicer_interface = fsl.Slicer(
-                    in_file=sbref_file,
-                    out_file=os.path.join(images_path, png_name),
+                    in_file=scout_file,
+                    out_file=png_file,
                     args="-u -a",
                 )
                 slicer_interface.run()
