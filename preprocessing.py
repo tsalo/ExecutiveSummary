@@ -103,7 +103,7 @@ def create_images_from_brainsprite_scene(
         _ = show_scene.run()
 
 
-def make_default_slices_row(base_img, out_png, working, red_img=None):
+def make_default_slices_row(base_img, out_png, work_dir, red_img=None):
     """Use the default slices made by slicesdir (.4, .5, and .6).
 
     It calls slicesdir, grabs the output png, and cleans up the
@@ -126,7 +126,7 @@ def make_default_slices_row(base_img, out_png, working, red_img=None):
     if red_img is not None:
         slicesdir.inputs.outline_image = red_img
 
-    results = slicesdir.run(cwd=working)
+    results = slicesdir.run(cwd=work_dir)
     img_png = results.outputs.out_files[0]
     return img_png
 
@@ -142,6 +142,24 @@ def preprocess(
     atlas=None,
     skip_sprite=False,
 ):
+    """Prepare data for executive summary.
+
+    Parameters
+    ----------
+    output_dir : str
+    html_path : str
+    subject_id : str
+    brainsprite_template : str
+    pngs_template : str
+    session_id : str or None, optional
+        Default is None.
+    bids_input : str or None, optional
+        Default is None.
+    atlas : str or None, optional
+        Default is None.
+    skip_sprite : bool, optional
+        Default is False.
+    """
     # SET UP ENVIRONMENT VARIABLES
     scriptdir = os.path.dirname(__file__)
     templatedir = os.path.join(scriptdir, "templates")
@@ -167,16 +185,15 @@ def preprocess(
         # The summary directory was not supplied, write to the output-dir ('files').
         html_path = os.path.join(processed_files, "executivesummary")
 
-    if not os.path.isdir(html_path):
-        # The summary directory was supplied, but does not yet exist.
-        os.makedirs(html_path)
+    # The summary directory was supplied, but does not yet exist.
+    os.makedirs(html_path, exist_ok=True)
 
     # Make the subfolder for the images. All paths in the html are relative to
     # the html folder, so must img must remain a subfolder to the html folder.
 
     # Lose old images.
     images_path = os.path.join(html_path, "img")
-    if not os.path.isdir(images_path):
+    if os.path.isdir(images_path):
         print("Remove images from prior runs.")
         if skip_sprite:
             # Cheat - keep the mosaics, and don't bother to log each file removed.
@@ -190,14 +207,10 @@ def preprocess(
                 os.remove(file_)
 
     os.makedirs(images_path, exists_ok=True)
-    if not os.path.isdir(images_path):
-        raise Exception(f"Unable to write {images_path}. Permissions?")
 
     # Sometimes need a "working directory"
-    working = os.path.join(html_path, "temp_files")
-    os.makedirs(working, exists_ok=True)
-    if not os.path.isdir(working):
-        raise Exception(f"Unable to write {working}. Permissions?")
+    work_dir = os.path.join(html_path, "temp_files")
+    os.makedirs(work_dir, exists_ok=True)
 
     print("START: executive summary image preprocessing")
 
@@ -232,7 +245,6 @@ def preprocess(
     # From here on, use the whole T1 file rather than the mask (used above).
     t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
     t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
-    has_t2 = True
     if not os.path.isfile(t2):
         print("t2 not found; using t1")
         has_t2 = False
@@ -317,7 +329,8 @@ def preprocess(
     if brainsprite_template is None:
         # Use default.
         brainsprite_template = os.path.join(
-            templatedir, "parasagittal_Tx_169_template.scene"
+            templatedir,
+            "parasagittal_Tx_169_template.scene",
         )
 
     if skip_sprite:
@@ -330,7 +343,8 @@ def preprocess(
         print("Cannot perform processing needed for brainsprite.")
 
     else:
-        os.makedirs(os.path.join(processed_files, "T1_pngs"))
+        # TAYLOR: Appears unused
+        os.makedirs(os.path.join(processed_files, "T1_pngs"), exist_ok=True)
 
         # Create brainsprite images for T1
         brainsprite_scene = os.path.join(processed_files, "t1_bs_scene.scene")
@@ -346,7 +360,8 @@ def preprocess(
         create_images_from_brainsprite_scene("T1", processed_files, brainsprite_scene)
 
         if has_t2:
-            os.makedirs(os.path.join(processed_files, "T2_pngs"))
+            # TAYLOR: Appears unused
+            os.makedirs(os.path.join(processed_files, "T2_pngs"), exist_ok=True)
 
             # Create brainsprite images for T2
             brainsprite_scene = os.path.join(processed_files, "t2_bs_scene.scene")
@@ -360,7 +375,9 @@ def preprocess(
                 brainsprite_scene,
             )
             create_images_from_brainsprite_scene(
-                "T2", processed_files, brainsprite_scene
+                "T2",
+                processed_files,
+                brainsprite_scene,
             )
 
     # Subcorticals
@@ -368,16 +385,18 @@ def preprocess(
     subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
 
     if not os.path.isfile(subcort_sub):
-        if not os.path.join(subcort_atl):
+        if not os.path.isfile(subcort_atl):
             print("Create subcortical images.")
 
             # The default slices are not as nice for subcorticals as they are for a whole brain.
             # Pick out slices using slicer.
+            subcort_sub_temp = os.path.join(work_dir, "subcort_sub.nii.gz")
+            subcort_atl_temp = os.path.join(work_dir, "subcort_atl.nii.gz")
 
-            shutil.copyfile(subcort_sub, "subcort_sub.nii.gz")
-            shutil.copyfile(subcort_atl, "subcort_atl.nii.gz")
+            shutil.copyfile(subcort_sub, subcort_sub_temp)
+            shutil.copyfile(subcort_atl, subcort_atl_temp)
 
-            prefix = "slice_"
+            prefix = "slice"
 
             # slices/slicer does not do well trying to make the red outline when it
             # cannot find the edges, so cannot use the ROI files with some low intensities.
@@ -385,13 +404,13 @@ def preprocess(
             # Make a binarized copy of the subcortical atlas to be used for the outline.
             bin_atl = "bin_subcort_atl.nii.gz"
             # bash code: fslmaths subcort_atl.nii.gz -bin ${bin_atl}
-            bin_img = binarize_img("subcort_atl.nii.gz")
+            bin_img = binarize_img(subcort_atl_temp)
             bin_img.to_filename(bin_atl)
 
             # Make a binarized copy of the subject's subcorticals to be used for the outline.
             bin_sub = "bin_subcort_sub.nii.gz"
             # bash code: fslmaths subcort_sub.nii.gz -bin ${bin_sub}
-            bin_img = binarize_img("subcort_sub.nii.gz")
+            bin_img = binarize_img(subcort_sub_temp)
             bin_img.to_filename(bin_sub)
 
             slices_to_plot = {
@@ -406,7 +425,7 @@ def preprocess(
                     atlas_in_subcort_png = f"{prefix}_atl_{counter}.png"
                     # TAYLOR: TODO: Figure out a way not to use FSL
                     slicer_interface = fsl.Slicer(
-                        in_file="subcort_sub.nii.gz",
+                        in_file=subcort_sub_temp,
                         image_edges=bin_atl,
                         single_slice=view,
                         slice_number=slice_number,
@@ -420,7 +439,7 @@ def preprocess(
                     subcort_in_atlas_png = f"{prefix}_sub_{counter}.png"
                     # TAYLOR: TODO: Figure out a way not to use FSL
                     slicer_interface = fsl.Slicer(
-                        in_file="subcort_atl.nii.gz",
+                        in_file=subcort_atl_temp,
                         image_edges=bin_sub,
                         single_slice=view,
                         slice_number=slice_number,
@@ -434,13 +453,13 @@ def preprocess(
 
             append_atlas_in_subcort = PNGAppend(
                 in_files=atlas_in_subcort_pngs,
-                out_file=os.path.join(working, f"{images_pre}_desc-AtlasInSubcort.gif"),
+                out_file="{images_pre}_desc-AtlasInSubcort.gif",
             )
             append_atlas_in_subcort.run()
 
             append_subcort_in_atlas = PNGAppend(
                 in_files=subcort_in_atlas_pngs,
-                out_file=os.path.join(working, f"{images_pre}_desc-SubcortInAtlas.gif"),
+                out_file=f"{images_pre}_desc-SubcortInAtlas.gif",
             )
             append_subcort_in_atlas.run()
 
@@ -452,10 +471,8 @@ def preprocess(
         print("No subcorticals will be included.")
 
     # Tasks
-    t1_2_brain = os.path.join(atlas_space_path, "T1w_restore_brain.2.nii.gz")
-    t2_2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.2.nii.gz")
-    if not os.path.isfile(t2_2_brain):
-        print("t2_2_brain not found")
+    t1_2_brain = os.path.join(work_dir, "T1w_restore_brain.2.nii.gz")
+    t2_2_brain = os.path.join(work_dir, "T2w_restore_brain.2.nii.gz")
 
     # Make T1w and T2w task images.
     tasks = sorted(glob.glob(os.path.join(results_path, "*task-*")))
