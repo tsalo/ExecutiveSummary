@@ -343,9 +343,6 @@ def preprocess(
         print("Cannot perform processing needed for brainsprite.")
 
     else:
-        # TAYLOR: Appears unused
-        os.makedirs(os.path.join(processed_files, "T1_pngs"), exist_ok=True)
-
         # Create brainsprite images for T1
         brainsprite_scene = os.path.join(processed_files, "t1_bs_scene.scene")
         build_scene_from_brainsprite_template(
@@ -360,9 +357,6 @@ def preprocess(
         create_images_from_brainsprite_scene("T1", processed_files, brainsprite_scene)
 
         if has_t2:
-            # TAYLOR: Appears unused
-            os.makedirs(os.path.join(processed_files, "T2_pngs"), exist_ok=True)
-
             # Create brainsprite images for T2
             brainsprite_scene = os.path.join(processed_files, "t2_bs_scene.scene")
             build_scene_from_brainsprite_template(
