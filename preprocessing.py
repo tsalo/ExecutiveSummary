@@ -397,8 +397,8 @@ def preprocess(
                 t2w_brainsprite_scene,
             )
 
-    if not os.path.isfile(subcort_sub):
-        if not os.path.isfile(subcort_atl):
+    if os.path.isfile(subcort_sub):
+        if os.path.isfile(subcort_atl):
             print("Create subcortical images.")
 
             # The default slices are not as nice for subcorticals as they are for a whole brain.
