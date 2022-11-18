@@ -144,8 +144,9 @@ def make_default_slices_row(base_img, out_png, work_dir, red_img=None):
         slicesdir.inputs.outline_image = red_img
 
     results = slicesdir.run(cwd=work_dir)
-    img_png = results.outputs.out_files[0]
-    return img_png
+    img_png = results.outputs.out_files
+    os.rename(img_png, out_png)
+    return out_png
 
 
 def preprocess(
@@ -259,6 +260,7 @@ def preprocess(
     t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
 
     # Subcorticals
+    # TAYLOR: NOTE: This file is missing
     subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
     subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
 
@@ -487,24 +489,27 @@ def preprocess(
     for task in tasks:
         task_name = os.path.basename(task)
         print(f"Make images for {task_name}")
+        # TAYLOR: NOTE: {task_name}.nii.gz does not exist, but maybe task-rest01_nonlin.nii.gz?
+        # TAYLOR: Oh, but wait, it works for frac2back01. Inconsistent outputs! Fun!
         task_img = os.path.join(results_path, task_name, f"{task_name}.nii.gz")
 
         # Use the first task image to make the resampled brain.
-        # TAYLOR: TODO: Replace with ANTS' ApplyTransforms
+        # TAYLOR: When you use apply_xfm but no matrix, I guess FLIRT just resamples the data.
+        # TAYLOR: Seems like a confusing way to do it though.
+        # TAYLOR: TODO: Replace with nilearn's resample_to_img
         flt = fsl.FLIRT()
         flt.inputs.in_file = t1_brain
         flt.inputs.reference = task_img
-        flt.inputs.apply_xfm = True
+        flt.inputs.args = "-applyxfm"  # can't use .apply_xfm = True
         flt.inputs.out_file = t1_2_brain
-        raise Exception(flt.cmdline)
         flt.run()
 
         if has_t2:
-            # TAYLOR: TODO: Replace with ANTS' ApplyTransforms
+            # TAYLOR: TODO: Replace with nilearn's resample_to_img
             flt = fsl.FLIRT()
             flt.inputs.in_file = t2_brain
             flt.inputs.reference = task_img
-            flt.inputs.apply_xfm = True
+            flt.inputs.args = "-applyxfm"  # can't use .apply_xfm = True
             flt.inputs.out_file = t2_2_brain
             flt.run()
 
