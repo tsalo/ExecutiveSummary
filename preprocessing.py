@@ -260,7 +260,7 @@ def preprocess(
     t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
 
     # Subcorticals
-    # TAYLOR: NOTE: This file is missing
+    # TAYLOR: NOTE: This file is only created by the infant pipeline
     subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
     subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
 
@@ -490,8 +490,8 @@ def preprocess(
         task_name = os.path.basename(task)
         print(f"Make images for {task_name}")
         # TAYLOR: NOTE: {task_name}.nii.gz does not exist, but maybe task-rest01_nonlin.nii.gz?
-        # TAYLOR: Oh, but wait, it works for frac2back01. Inconsistent outputs! Fun!
         task_img = os.path.join(results_path, task_name, f"{task_name}.nii.gz")
+        assert os.path.isfile(task_img), f"{task_img} DNE"
 
         # Use the first task image to make the resampled brain.
         # TAYLOR: When you use apply_xfm but no matrix, I guess FLIRT just resamples the data.
