@@ -3,10 +3,18 @@ import glob
 import os
 import shutil
 
-from nilearn.image import binarize_img
+# from nilearn.image import binarize_img
 from nipype.interfaces import fsl
 
 from interfaces import PNGAppend, ShowScene, SlicesDir
+
+
+def binarize_img(f):
+    img = nib.load(f)
+    data = img.get_fdata()
+    data = data.astype(bool).astype(int)
+    new_img = nib.Nifti1Image(data, img.affine, img.header)
+    return new_img
 
 
 def build_scene_from_pngs_template(
@@ -121,7 +129,8 @@ def make_default_slices_row(base_img, out_png, work_dir, red_img=None):
     See https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Miscvis
     """
     # TAYLOR: TODO: Figure out a way not to use FSL
-    slicesdir = SlicesDir(in_files=[base_img])
+    slicesdir = SlicesDir()
+    slicesdir.inputs.in_files = [base_img]
 
     if red_img is not None:
         slicesdir.inputs.outline_image = red_img
@@ -206,11 +215,11 @@ def preprocess(
             for file_ in glob.glob(os.path.join(images_path, "*")):
                 os.remove(file_)
 
-    os.makedirs(images_path, exists_ok=True)
+    os.makedirs(images_path, exist_ok=True)
 
     # Sometimes need a "working directory"
     work_dir = os.path.join(html_path, "temp_files")
-    os.makedirs(work_dir, exists_ok=True)
+    os.makedirs(work_dir, exist_ok=True)
 
     print("START: executive summary image preprocessing")
 
@@ -271,11 +280,13 @@ def preprocess(
         make_default_slices_row(
             t1_mask,
             os.path.join(images_path, f"{images_prefix}_desc-AtlasInT1w.gif"),
+            work_dir=work_dir,
             red_img=atlas,
         )
         make_default_slices_row(
             atlas,
             os.path.join(images_path, f"{images_prefix}_desc-T1wInAtlas.gif"),
+            work_dir=work_dir,
             red_img=t1_mask,
         )
 
@@ -497,22 +508,26 @@ def preprocess(
         make_default_slices_row(
             task_img,
             os.path.join(images_path, f"{task_prefix}_desc-T1InTask.gif"),
+            work_dir=work_dir,
             red_img=t1_2_brain,
         )
         make_default_slices_row(
             t1_2_brain,
             os.path.join(images_path, f"{task_prefix}_desc-TaskInT1.gif"),
+            work_dir=work_dir,
             red_img=task_img,
         )
         if has_t2:
             make_default_slices_row(
                 task_img,
                 os.path.join(images_path, f"{task_prefix}_desc-T2InTask.gif"),
+                work_dir=work_dir,
                 red_img=t2_2_brain,
             )
             make_default_slices_row(
                 t2_2_brain,
                 os.path.join(images_path, f"{task_prefix}_desc-TaskInT2.gif"),
+                work_dir=work_dir,
                 red_img=task_img,
             )
 

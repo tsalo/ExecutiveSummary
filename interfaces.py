@@ -5,6 +5,7 @@ from nipype.interfaces.base import (
     CommandLineInputSpec,
     Directory,
     File,
+    InputMultiPath,
     OutputMultiPath,
     TraitedSpec,
     traits,
@@ -38,8 +39,10 @@ class _SlicesDirInputSpec(FSLCommandInputSpec):
         position=3,
         desc="output every second axial slice rather than just 9 ortho slices",
     )
-    in_files = OutputMultiPath(
+
+    in_files = InputMultiPath(
         File(exists=True),
+        argstr="%s",
         mandatory=True,
         position=-1,
         desc="List of files to process.",
@@ -86,7 +89,7 @@ class SlicesDir(FSLCommand):
         out_dir = os.path.abspath(os.path.join(os.getcwd(), "slicesdir"))
         outputs["out_dir"] = out_dir
         outputs["out_files"] = [
-            self._gen_fname(basename=f, cwd=out_dir, ext=".png")
+            self._gen_fname(basename=f.replace(os.sep, "_"), cwd=out_dir, ext=".png")
             for f in self.inputs.in_files
         ]
         return outputs
@@ -99,7 +102,7 @@ class SlicesDir(FSLCommand):
 
 
 class _PNGAppendInputSpec(FSLCommandInputSpec):
-    in_files = OutputMultiPath(
+    in_files = InputMultiPath(
         File(exists=True),
         mandatory=True,
         position=0,
