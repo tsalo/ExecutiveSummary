@@ -1,8 +1,10 @@
 """Functions translated from the bash code."""
 import glob
+import gzip
 import os
 import shutil
 
+import nibabel as nib
 # from nilearn.image import binarize_img
 from nipype.interfaces import fsl
 
@@ -40,8 +42,12 @@ def build_scene_from_pngs_template(
         "LWHITE": lw_path,
     }
 
-    with open(pngs_template, "r") as fo:
-        data = fo.read()
+    if pngs_template.endswith(".gz"):
+        with gzip.open(pngs_template, mode="rt") as fo:
+            data = fo.read()
+    else:
+        with open(pngs_template, "r") as fo:
+            data = fo.read()
 
     for template, path in paths.items():
         # Replace templated pathnames and filenames in local copy.
@@ -70,8 +76,12 @@ def build_scene_from_brainsprite_template(
         "L_WHITE": lw_path,
     }
 
-    with open(brainsprite_template, "r") as fo:
-        data = fo.read()
+    if brainsprite_template.endswith(".gz"):
+        with gzip.open(brainsprite_template, mode="rt") as fo:
+            data = fo.read()
+    else:
+        with open(brainsprite_template, "r") as fo:
+            data = fo.read()
 
     for template, path in paths.items():
         # Replace templated pathnames and filenames in local copy.
@@ -93,13 +103,11 @@ def create_images_from_brainsprite_scene(
         data = fo.read()
 
     total_frames = data.count("SceneInfo Index=")
+    pngs_out_dir = os.path.join(output_dir, f"{image_type}_pngs")
+    os.makedirs(pngs_out_dir, exist_ok=True)
 
     for i in range(total_frames):
-        out_file = os.path.join(
-            output_dir,
-            f"{image_type}_pngs",
-            f"P_{image_type}_frame_{i}.png",
-        )
+        out_file = os.path.join(pngs_out_dir, f"P_{image_type}_frame_{i}.png")
 
         show_scene = ShowScene(
             scene_file=brainsprite_scene,
@@ -263,6 +271,12 @@ def preprocess(
     t1w_brainsprite_scene = os.path.join(work_dir, "t1_bs_scene.scene")
     t2w_brainsprite_scene = os.path.join(work_dir, "t2_bs_scene.scene")
 
+    if pngs_template is None:
+        pngs_template = os.path.join(templatedir, "image_template_temp.scene.gz")
+
+    if brainsprite_template is None:
+        brainsprite_template = os.path.join(templatedir, "parasagittal_Tx_169_template.scene.gz")
+
     # Anat
     images_prefix = f"sub-{subject_id}"
     if session_id is not None:
@@ -299,10 +313,6 @@ def preprocess(
         print("t2_brain not found")
 
     # Make named pngs to show specific anatomical areas.
-    if pngs_template is None:
-        # Use default.
-        pngs_template = os.path.join(templatedir, "image_template_temp.scene")
-
     build_scene_from_pngs_template(
         t2 if has_t2 else t1,
         t1,
@@ -348,13 +358,6 @@ def preprocess(
     os.remove(pngs_scene)
 
     # Make pngs to be used for the brainsprite.
-    if brainsprite_template is None:
-        # Use default.
-        brainsprite_template = os.path.join(
-            templatedir,
-            "parasagittal_Tx_169_template.scene",
-        )
-
     if skip_sprite:
         # Skip brainsprite processing.
         print("Skip brainsprite processing per user request.")
@@ -430,7 +433,7 @@ def preprocess(
             for view, slice_numbers in slices_to_plot.items():
                 for slice_number in slice_numbers:
                     # Generate atlas in subcortical figure
-                    atlas_in_subcort_png = f"slice_atl_{counter}.png"
+                    atlas_in_subcort_png = os.path.join(work_dir, f"slice_atl_{counter}.png")
                     # TAYLOR: TODO: Figure out a way not to use FSL
                     slicer_interface = fsl.Slicer(
                         in_file=subcort_sub_temp,
@@ -444,7 +447,7 @@ def preprocess(
                     atlas_in_subcort_pngs.append(atlas_in_subcort_png)
 
                     # Generate subcortical in atlas figure
-                    subcort_in_atlas_png = f"slice_sub_{counter}.png"
+                    subcort_in_atlas_png = os.path.join(work_dir, f"slice_sub_{counter}.png")
                     # TAYLOR: TODO: Figure out a way not to use FSL
                     slicer_interface = fsl.Slicer(
                         in_file=subcort_atl_temp,
@@ -493,6 +496,7 @@ def preprocess(
         flt.inputs.reference = task_img
         flt.inputs.apply_xfm = True
         flt.inputs.out_file = t1_2_brain
+        raise Exception(flt.cmdline)
         flt.run()
 
         if has_t2:
