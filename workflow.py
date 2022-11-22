@@ -91,12 +91,12 @@ def make_mosaic(png_path, mosaic_path):
     result.save(dest, "JPEG", quality=quality_val)
 
 
-def preprocess_tx(tx, files_path, images_path):
+def preprocess_tx(tx, images_path):
     """If there are pngs for tx, make the mosaic file for the brainsprite.
 
     If not, no problem. Layout will use the mosaic if it is there.
     """
-    pngs_dir = os.path.join(files_path, f"{tx}_pngs")
+    pngs_dir = os.path.join(images_path, f"{tx}_pngs")
 
     if os.path.isdir(pngs_dir):
         # Call the program to make the mosaic from the pngs. and write
@@ -163,9 +163,9 @@ def interface(
 
         # Make mosaic(s) for brainsprite(s).
         print("Making mosaic for T1 BrainSprite.")
-        preprocess_tx("T1", files_path, images_path)
+        preprocess_tx("T1", images_path)
         print("Making mosaic for T2 BrainSprite.")
-        preprocess_tx("T2", files_path, images_path)
+        preprocess_tx("T2", images_path)
         print("Finished with preprocessing.")
 
     # Done with preproc (or skipped it). Call the page layout to make the page.

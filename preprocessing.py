@@ -12,6 +12,10 @@ from interfaces import PNGAppend, ShowScene, SlicesDir
 
 
 def binarize_img(f):
+    """Binarize a niimg.
+
+    TODO: Replace with nilearn.image.binarize_img when I have 0.9.2+ in Docker image.
+    """
     img = nib.load(f)
     data = img.get_fdata()
     data = data.astype(bool).astype(int)
@@ -29,7 +33,7 @@ def build_scene_from_pngs_template(
     pngs_scene,
     pngs_template,
 ):
-    """Build template scene from PNG files.
+    """Create modified .scene text file to be used to create PNGs later.
 
     takes the following arguments: t2_path t1_path rp_path lp_path rw_path lw_path
     """
@@ -68,6 +72,7 @@ def build_scene_from_brainsprite_template(
     brainsprite_template,
     brainsprite_scene,
 ):
+    """Create modified .scene text file to be used for creating PNGs later."""
     paths = {
         "TX_IMG": tx_img,
         "R_PIAL": rp_path,
@@ -98,6 +103,7 @@ def create_images_from_brainsprite_scene(
     output_dir,
     brainsprite_scene,
 ):
+    """Create a series of PNG files that will later be used in a brainsprite."""
     # bash code: total_frames=$( grep "SceneInfo Index=" ${brainsprite_scene} | wc -l )
     with open(brainsprite_scene, "r") as fo:
         data = fo.read()
@@ -233,6 +239,8 @@ def preprocess(
     print("START: executive summary image preprocessing")
 
     # Select input files
+    # Standard-space images
+    # NOTE: Why is t1_mask the same as t1_brain? Is it actually a mask?
     t1_mask = os.path.join(atlas_space_path, "T1w_restore_brain.nii.gz")
     t1 = os.path.join(atlas_space_path, "T1w_restore.nii.gz")
     t2 = os.path.join(atlas_space_path, "T2w_restore.nii.gz")
@@ -260,6 +268,7 @@ def preprocess(
     t2_brain = os.path.join(atlas_space_path, "T2w_restore_brain.nii.gz")
 
     # Subcorticals
+    # Standard-space ROIs
     # TAYLOR: NOTE: This file is only created by the infant pipeline
     subcort_sub = os.path.join(rois_path, "sub2atl_ROI.2.nii.gz")
     subcort_atl = os.path.join(rois_path, "Atlas_ROIs.2.nii.gz")
@@ -285,6 +294,7 @@ def preprocess(
         images_prefix += f"_ses-{session_id}"
 
     if atlas is None:
+        # NOTE: Unreachable because atlas is already overwritten if not set.
         print(
             "The atlas argument was not supplied. Cannot create atlas-in-t1 or t1-in-atlas"
         )
@@ -325,6 +335,7 @@ def preprocess(
         pngs_scene=pngs_scene,
         pngs_template=pngs_template,
     )
+
     image_names = [
         "T1-Axial-InferiorTemporal-Cerebellum",
         "T2-Axial-InferiorTemporal-Cerebellum",
@@ -380,7 +391,7 @@ def preprocess(
             brainsprite_template,
             t1w_brainsprite_scene,
         )
-        create_images_from_brainsprite_scene("T1", output_dir, t1w_brainsprite_scene)
+        create_images_from_brainsprite_scene("T1", images_path, t1w_brainsprite_scene)
 
         if has_t2:
             # Create brainsprite images for T2
@@ -395,92 +406,92 @@ def preprocess(
             )
             create_images_from_brainsprite_scene(
                 "T2",
-                output_dir,
+                images_path,
                 t2w_brainsprite_scene,
             )
 
-    if os.path.isfile(subcort_sub):
-        if os.path.isfile(subcort_atl):
-            print("Create subcortical images.")
+    if os.path.isfile(subcort_sub) and os.path.isfile(subcort_atl):
+        # NOTE: Apparently this is only done for infant data.
+        print("Create subcortical images.")
 
-            # The default slices are not as nice for subcorticals as they are for a whole brain.
-            # Pick out slices using slicer.
-            subcort_sub_temp = os.path.join(work_dir, "subcort_sub.nii.gz")
-            subcort_atl_temp = os.path.join(work_dir, "subcort_atl.nii.gz")
+        # The default slices are not as nice for subcorticals as they are for a whole brain.
+        # Pick out slices using slicer.
+        subcort_sub_temp = os.path.join(work_dir, "subcort_sub.nii.gz")
+        subcort_atl_temp = os.path.join(work_dir, "subcort_atl.nii.gz")
 
-            shutil.copyfile(subcort_sub, subcort_sub_temp)
-            shutil.copyfile(subcort_atl, subcort_atl_temp)
+        shutil.copyfile(subcort_sub, subcort_sub_temp)
+        shutil.copyfile(subcort_atl, subcort_atl_temp)
 
-            # slices/slicer does not do well trying to make the red outline when it
-            # cannot find the edges, so cannot use the ROI files with some low intensities.
+        # slices/slicer does not do well trying to make the red outline when it
+        # cannot find the edges, so cannot use the ROI files with some low intensities.
 
-            # Make a binarized copy of the subcortical atlas to be used for the outline.
-            bin_atl = os.path.join(work_dir, "bin_subcort_atl.nii.gz")
-            # bash code: fslmaths subcort_atl.nii.gz -bin ${bin_atl}
-            bin_img = binarize_img(subcort_atl_temp)
-            bin_img.to_filename(bin_atl)
+        # Make a binarized copy of the subcortical atlas to be used for the outline.
+        bin_atl = os.path.join(work_dir, "bin_subcort_atl.nii.gz")
+        # bash code: fslmaths subcort_atl.nii.gz -bin ${bin_atl}
+        bin_img = binarize_img(subcort_atl_temp)
+        bin_img.to_filename(bin_atl)
 
-            # Make a binarized copy of the subject's subcorticals to be used for the outline.
-            bin_sub = bin_atl = os.path.join(work_dir, "bin_subcort_sub.nii.gz")
-            # bash code: fslmaths subcort_sub.nii.gz -bin ${bin_sub}
-            bin_img = binarize_img(subcort_sub_temp)
-            bin_img.to_filename(bin_sub)
+        # Make a binarized copy of the subject's subcorticals to be used for the outline.
+        bin_sub = bin_atl = os.path.join(work_dir, "bin_subcort_sub.nii.gz")
+        # bash code: fslmaths subcort_sub.nii.gz -bin ${bin_sub}
+        bin_img = binarize_img(subcort_sub_temp)
+        bin_img.to_filename(bin_sub)
 
-            slices_to_plot = {
-                "x": [36, 45, 52],  # sagittal
-                "y": [43, 54, 65],  # coronal
-                "z": [23, 33, 39],  # axial
-            }
-            counter, atlas_in_subcort_pngs, subcort_in_atlas_pngs = 0, [], []
-            for view, slice_numbers in slices_to_plot.items():
-                for slice_number in slice_numbers:
-                    # Generate atlas in subcortical figure
-                    atlas_in_subcort_png = os.path.join(work_dir, f"slice_atl_{counter}.png")
-                    # TAYLOR: TODO: Figure out a way not to use FSL
-                    slicer_interface = fsl.Slicer(
-                        in_file=subcort_sub_temp,
-                        image_edges=bin_atl,
-                        single_slice=view,
-                        slice_number=slice_number,
-                        out_file=atlas_in_subcort_png,
-                        args="-u -L",
-                    )
-                    slicer_interface.run()
-                    atlas_in_subcort_pngs.append(atlas_in_subcort_png)
+        # NOTE: These slices are almost certainly specific to a given MNI template and
+        # resolution.
+        slices_to_plot = {
+            "x": [36, 45, 52],  # sagittal
+            "y": [43, 54, 65],  # coronal
+            "z": [23, 33, 39],  # axial
+        }
+        counter, atlas_in_subcort_pngs, subcort_in_atlas_pngs = 0, [], []
+        for view, slice_numbers in slices_to_plot.items():
+            for slice_number in slice_numbers:
+                # Generate atlas in subcortical figure
+                atlas_in_subcort_png = os.path.join(work_dir, f"slice_atl_{counter}.png")
+                # TAYLOR: TODO: Figure out a way not to use FSL
+                slicer_interface = fsl.Slicer(
+                    in_file=subcort_sub_temp,
+                    image_edges=bin_atl,
+                    single_slice=view,
+                    slice_number=slice_number,
+                    out_file=atlas_in_subcort_png,
+                    args="-u -L",
+                )
+                slicer_interface.run()
+                atlas_in_subcort_pngs.append(atlas_in_subcort_png)
 
-                    # Generate subcortical in atlas figure
-                    subcort_in_atlas_png = os.path.join(work_dir, f"slice_sub_{counter}.png")
-                    # TAYLOR: TODO: Figure out a way not to use FSL
-                    slicer_interface = fsl.Slicer(
-                        in_file=subcort_atl_temp,
-                        image_edges=bin_sub,
-                        single_slice=view,
-                        slice_number=slice_number,
-                        out_file=subcort_in_atlas_png,
-                        args="-u -L",
-                    )
-                    slicer_interface.run()
-                    subcort_in_atlas_pngs.append(subcort_in_atlas_png)
+                # Generate subcortical in atlas figure
+                subcort_in_atlas_png = os.path.join(work_dir, f"slice_sub_{counter}.png")
+                # TAYLOR: TODO: Figure out a way not to use FSL
+                slicer_interface = fsl.Slicer(
+                    in_file=subcort_atl_temp,
+                    image_edges=bin_sub,
+                    single_slice=view,
+                    slice_number=slice_number,
+                    out_file=subcort_in_atlas_png,
+                    args="-u -L",
+                )
+                slicer_interface.run()
+                subcort_in_atlas_pngs.append(subcort_in_atlas_png)
 
-                    counter += 1
+                counter += 1
 
-            append_atlas_in_subcort = PNGAppend(
-                in_files=atlas_in_subcort_pngs,
-                out_file=os.path.join(images_path, "{images_prefix}_desc-AtlasInSubcort.gif"),
-            )
-            append_atlas_in_subcort.run()
+        append_atlas_in_subcort = PNGAppend(
+            in_files=atlas_in_subcort_pngs,
+            out_file=os.path.join(images_path, "{images_prefix}_desc-AtlasInSubcort.gif"),
+        )
+        append_atlas_in_subcort.run()
 
-            append_subcort_in_atlas = PNGAppend(
-                in_files=subcort_in_atlas_pngs,
-                out_file=os.path.join(images_path, f"{images_prefix}_desc-SubcortInAtlas.gif"),
-            )
-            append_subcort_in_atlas.run()
+        append_subcort_in_atlas = PNGAppend(
+            in_files=subcort_in_atlas_pngs,
+            out_file=os.path.join(images_path, f"{images_prefix}_desc-SubcortInAtlas.gif"),
+        )
+        append_subcort_in_atlas.run()
 
-        else:
-            print(f"Missing {subcort_atl}.")
-            print("Cannot create atlas-in-subcort or subcort-in-atlas.")
     else:
-        print(f"Missing {subcort_sub}.")
+        print(f"Missing {subcort_atl} or {subcort_sub}.")
+        print("Cannot create atlas-in-subcort or subcort-in-atlas.")
         print("No subcorticals will be included.")
 
     # Make T1w and T2w task images.
